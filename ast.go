@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/influxdata/influxdb/models"
 	internal "github.com/influxdata/influxql/internal"
 )
 
@@ -44,15 +43,27 @@ const (
 )
 
 const (
-	// MinTime is used as the minimum time value when computing an unbounded range.
-	// This time is one less than the MinNanoTime so that the first minimum
-	// time can be used as a sentinel value to signify that it is the default
-	// value rather than explicitly set by the user.
-	MinTime = models.MinNanoTime - 1
+	// MinNanoTime is the minumum time that can be represented.
+	//
+	// 1677-09-21 00:12:43.145224194 +0000 UTC
+	//
+	// The two lowest minimum integers are used as sentinel values.  The
+	// minimum value needs to be used as a value lower than any other value for
+	// comparisons and another separate value is needed to act as a sentinel
+	// default value that is unusable by the user, but usable internally.
+	// Because these two values need to be used for a special purpose, we do
+	// not allow users to write points at these two times.
+	MinTime = int64(math.MinInt64) + 2
 
-	// MaxTime is used as the maximum time value when computing an unbounded range.
-	// This time is 2262-04-11 23:47:16.854775806 +0000 UTC
-	MaxTime = models.MaxNanoTime
+	// MaxNanoTime is the maximum time that can be represented.
+	//
+	// 2262-04-11 23:47:16.854775806 +0000 UTC
+	//
+	// The highest time represented by a nanosecond needs to be used for an
+	// exclusive range in the shard group, so the maximum time needs to be one
+	// less than the possible maximum number of nanoseconds representable by an
+	// int64 so that we don't lose a point at that one time.
+	MaxTime = int64(math.MaxInt64) - 1
 )
 
 var (
