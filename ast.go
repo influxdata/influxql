@@ -43,7 +43,7 @@ const (
 )
 
 const (
-	// MinNanoTime is the minumum time that can be represented.
+	// MinTime is the minumum time that can be represented.
 	//
 	// 1677-09-21 00:12:43.145224194 +0000 UTC
 	//
@@ -55,7 +55,7 @@ const (
 	// not allow users to write points at these two times.
 	MinTime = int64(math.MinInt64) + 2
 
-	// MaxNanoTime is the maximum time that can be represented.
+	// MaxTime is the maximum time that can be represented.
 	//
 	// 2262-04-11 23:47:16.854775806 +0000 UTC
 	//
@@ -1098,11 +1098,7 @@ func cloneSource(s Source) Source {
 
 	switch s := s.(type) {
 	case *Measurement:
-		m := &Measurement{Database: s.Database, RetentionPolicy: s.RetentionPolicy, Name: s.Name}
-		if s.Regex != nil {
-			m.Regex = &RegexLiteral{Val: regexp.MustCompile(s.Regex.Val.String())}
-		}
-		return m
+		return s.Clone()
 	case *SubQuery:
 		return &SubQuery{Statement: s.Statement.Clone()}
 	default:
@@ -3205,6 +3201,26 @@ type Measurement struct {
 	Name            string
 	Regex           *RegexLiteral
 	IsTarget        bool
+
+	// This field indicates that the measurement should read be read from the
+	// specified system iterator.
+	SystemIterator string
+}
+
+// Clone returns a deep clone of the Measurement.
+func (m *Measurement) Clone() *Measurement {
+	var regexp *RegexLiteral
+	if m.Regex != nil && m.Regex.Val != nil {
+		regexp = &RegexLiteral{Val: m.Regex.Val.Copy()}
+	}
+	return &Measurement{
+		Database:        m.Database,
+		RetentionPolicy: m.RetentionPolicy,
+		Name:            m.Name,
+		Regex:           regexp,
+		IsTarget:        m.IsTarget,
+		SystemIterator:  m.SystemIterator,
+	}
 }
 
 // String returns a string representation of the measurement.
@@ -3223,8 +3239,10 @@ func (m *Measurement) String() string {
 		_, _ = buf.WriteString(`.`)
 	}
 
-	if m.Name != "" {
+	if m.Name != "" && m.SystemIterator == "" {
 		_, _ = buf.WriteString(QuoteIdent(m.Name))
+	} else if m.SystemIterator != "" {
+		_, _ = buf.WriteString(QuoteIdent(m.SystemIterator))
 	} else if m.Regex != nil {
 		_, _ = buf.WriteString(m.Regex.String())
 	}
@@ -5095,18 +5113,40 @@ func (t TimeRange) IsZero() bool {
 	return t.Min.IsZero() && t.Max.IsZero()
 }
 
-// MinTime returns the minimum time in nanoseconds since the epoch.
+// Used by TimeRange methods.
+var minTime = time.Unix(0, MinTime)
+var maxTime = time.Unix(0, MaxTime)
+
+// MinTime returns the minimum time of the TimeRange.
 // If the minimum time is zero, this returns the minimum possible time.
-func (t TimeRange) MinTime() int64 {
+func (t TimeRange) MinTime() time.Time {
+	if t.Min.IsZero() {
+		return minTime
+	}
+	return t.Min
+}
+
+// MaxTime returns the maximum time of the TimeRange.
+// If the maximum time is zero, this returns the maximum possible time.
+func (t TimeRange) MaxTime() time.Time {
+	if t.Max.IsZero() {
+		return maxTime
+	}
+	return t.Max
+}
+
+// MinTimeNano returns the minimum time in nanoseconds since the epoch.
+// If the minimum time is zero, this returns the minimum possible time.
+func (t TimeRange) MinTimeNano() int64 {
 	if t.Min.IsZero() {
 		return MinTime
 	}
 	return t.Min.UnixNano()
 }
 
-// MaxTime returns the maximum time in nanoseconds since the epoch.
+// MaxTimeNano returns the maximum time in nanoseconds since the epoch.
 // If the maximum time is zero, this returns the maximum possible time.
-func (t TimeRange) MaxTime() int64 {
+func (t TimeRange) MaxTimeNano() int64 {
 	if t.Max.IsZero() {
 		return MaxTime
 	}
