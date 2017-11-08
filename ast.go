@@ -23,23 +23,23 @@ const (
 	// Unknown primitive data type.
 	Unknown DataType = 0
 	// Float means the data type is a float.
-	Float = 1
+	Float DataType = 1
 	// Integer means the data type is an integer.
-	Integer = 2
+	Integer DataType = 2
 	// String means the data type is a string of text.
-	String = 3
+	String DataType = 3
 	// Boolean means the data type is a boolean.
-	Boolean = 4
+	Boolean DataType = 4
 	// Time means the data type is a time.
-	Time = 5
+	Time DataType = 5
 	// Duration means the data type is a duration of time.
-	Duration = 6
+	Duration DataType = 6
 	// Tag means the data type is a tag.
-	Tag = 7
+	Tag DataType = 7
 	// AnyField means the data type is any field.
-	AnyField = 8
+	AnyField DataType = 8
 	// Unsigned means the data type is an unsigned integer.
-	Unsigned = 9
+	Unsigned DataType = 9
 )
 
 const (
