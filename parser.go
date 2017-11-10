@@ -2549,7 +2549,6 @@ func (p *Parser) ParseExpr() (Expr, error) {
 		var rhs Expr
 		if IsRegexOp(op) {
 			// RHS of a regex operator must be a regular expression.
-			p.consumeWhitespace()
 			if rhs, err = p.parseRegex(); err != nil {
 				return nil, err
 			}
