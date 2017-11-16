@@ -3634,6 +3634,16 @@ func TestParser_ParseExpr(t *testing.T) {
 			},
 		},
 
+		// Binary expression with quoted '/' regex without space around operator. Influxdb #9058
+		{
+			s: `url=~/http\:\/\/www\.example\.com/`,
+			expr: &influxql.BinaryExpr{
+				Op:  influxql.EQREGEX,
+				LHS: &influxql.VarRef{Val: "url"},
+				RHS: &influxql.RegexLiteral{Val: regexp.MustCompile(`http\://www\.example\.com`)},
+			},
+		},
+
 		// Complex binary expression.
 		{
 			s: `value + 3 < 30 AND 1 + 2 OR true`,
