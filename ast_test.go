@@ -794,6 +794,9 @@ func TestConditionExpr(t *testing.T) {
 		{s: `host = 'server01' OR (value)`, err: `invalid condition expression: value`},
 		{s: `time > '2262-04-11 23:47:17'`, err: `time 2262-04-11T23:47:17Z overflows time literal`},
 		{s: `time > '1677-09-20 19:12:43'`, err: `time 1677-09-20T19:12:43Z underflows time literal`},
+		{s: `true AND (false OR product = 'xyz')`,
+			cond: `true AND (false OR product = 'xyz')`,
+		},
 	} {
 		t.Run(tt.s, func(t *testing.T) {
 			expr, err := influxql.ParseExpr(tt.s)

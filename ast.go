@@ -5222,6 +5222,8 @@ func ConditionExpr(cond Expr, valuer Valuer) (Expr, TimeRange, error) {
 			return nil, timeRange, nil
 		}
 		return &ParenExpr{Expr: expr}, timeRange, nil
+	case *BooleanLiteral:
+		return cond, TimeRange{}, nil
 	default:
 		return nil, TimeRange{}, fmt.Errorf("invalid condition expression: %s", cond)
 	}
