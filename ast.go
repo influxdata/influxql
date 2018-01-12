@@ -5185,11 +5185,11 @@ func ConditionExpr(cond Expr, valuer Valuer) (Expr, TimeRange, error) {
 			} else if lhsExpr == nil {
 				return rhsExpr, timeRange, nil
 			}
-			return &BinaryExpr{
+			return Reduce(&BinaryExpr{
 				Op:  cond.Op,
 				LHS: lhsExpr,
 				RHS: rhsExpr,
-			}, timeRange, nil
+			}, nil), timeRange, nil
 		}
 
 		// If either the left or the right side is "time", we are looking at
@@ -5213,7 +5213,7 @@ func ConditionExpr(cond Expr, valuer Valuer) (Expr, TimeRange, error) {
 			timeRange, err := getTimeRange(op, cond.LHS, valuer)
 			return nil, timeRange, err
 		}
-		return cond, TimeRange{}, nil
+		return Reduce(cond, nil), TimeRange{}, nil
 	case *ParenExpr:
 		expr, timeRange, err := ConditionExpr(cond.Expr, valuer)
 		if err != nil {
@@ -5221,7 +5221,7 @@ func ConditionExpr(cond Expr, valuer Valuer) (Expr, TimeRange, error) {
 		} else if expr == nil {
 			return nil, timeRange, nil
 		}
-		return &ParenExpr{Expr: expr}, timeRange, nil
+		return Reduce(&ParenExpr{Expr: expr}, nil), timeRange, nil
 	case *BooleanLiteral:
 		return cond, TimeRange{}, nil
 	default:
