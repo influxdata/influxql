@@ -748,10 +748,10 @@ func TestConditionExpr(t *testing.T) {
 			min: mustParseTime("2000-01-01T00:00:00Z"),
 			max: mustParseTime("2000-01-01T01:00:00Z").Add(-1)},
 		{s: `host = 'server01' AND (region = 'uswest' AND time >= now() - 10m)`,
-			cond: `host = 'server01' AND (region = 'uswest')`,
+			cond: `host = 'server01' AND region = 'uswest'`,
 			min:  mustParseTime("1999-12-31T23:50:00Z")},
 		{s: `(host = 'server01' AND region = 'uswest') AND time >= now() - 10m`,
-			cond: `(host = 'server01' AND region = 'uswest')`,
+			cond: `host = 'server01' AND region = 'uswest'`,
 			min:  mustParseTime("1999-12-31T23:50:00Z")},
 		{s: `host = 'server01' AND (time >= '2000-01-01T00:00:00Z' AND time < '2000-01-01T01:00:00Z')`,
 			cond: `host = 'server01'`,
@@ -795,8 +795,9 @@ func TestConditionExpr(t *testing.T) {
 		{s: `time > '2262-04-11 23:47:17'`, err: `time 2262-04-11T23:47:17Z overflows time literal`},
 		{s: `time > '1677-09-20 19:12:43'`, err: `time 1677-09-20T19:12:43Z underflows time literal`},
 		{s: `true AND (false OR product = 'xyz')`,
-			cond: `true AND (false OR product = 'xyz')`,
+			cond: `product = 'xyz'`,
 		},
+		{s: `'a' = 'a'`, cond: `true`},
 	} {
 		t.Run(tt.s, func(t *testing.T) {
 			expr, err := influxql.ParseExpr(tt.s)
