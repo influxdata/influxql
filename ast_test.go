@@ -1127,6 +1127,16 @@ func TestEvalType(t *testing.T) {
 			},
 		},
 		{
+			name: `stddev() with an integer`,
+			in:   `stddev(value)`,
+			typ:  influxql.Float,
+			data: EvalFixture{
+				"cpu": map[string]influxql.DataType{
+					"value": influxql.Integer,
+				},
+			},
+		},
+		{
 			name: `value inside a parenthesis`,
 			in:   `(value)`,
 			typ:  influxql.Float,
