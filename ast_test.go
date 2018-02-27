@@ -797,7 +797,9 @@ func TestConditionExpr(t *testing.T) {
 		{s: `true AND (false OR product = 'xyz')`,
 			cond: `product = 'xyz'`,
 		},
-		{s: `'a' = 'a'`, cond: `true`},
+		{s: `'a' = 'a'`, cond: ``},
+		{s: `value > 0 OR true`, cond: ``},
+		{s: `host = 'server01' AND false`, cond: `false`},
 	} {
 		t.Run(tt.s, func(t *testing.T) {
 			expr, err := influxql.ParseExpr(tt.s)
