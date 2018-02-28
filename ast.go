@@ -242,6 +242,7 @@ func (Measurements) node()     {}
 func (*NilLiteral) node()      {}
 func (*NumberLiteral) node()   {}
 func (*ParenExpr) node()       {}
+func (*PiLiteral) node()       {}
 func (*RegexLiteral) node()    {}
 func (*ListLiteral) node()     {}
 func (*SortField) node()       {}
@@ -372,6 +373,7 @@ func (*UnsignedLiteral) expr() {}
 func (*NilLiteral) expr()      {}
 func (*NumberLiteral) expr()   {}
 func (*ParenExpr) expr()       {}
+func (*PiLiteral) expr()       {}
 func (*RegexLiteral) expr()    {}
 func (*ListLiteral) expr()     {}
 func (*StringLiteral) expr()   {}
@@ -393,6 +395,7 @@ func (*IntegerLiteral) literal()  {}
 func (*UnsignedLiteral) literal() {}
 func (*NilLiteral) literal()      {}
 func (*NumberLiteral) literal()   {}
+func (*PiLiteral) literal()       {}
 func (*RegexLiteral) literal()    {}
 func (*ListLiteral) literal()     {}
 func (*StringLiteral) literal()   {}
@@ -3504,6 +3507,12 @@ type DurationLiteral struct {
 // String returns a string representation of the literal.
 func (l *DurationLiteral) String() string { return FormatDuration(l.Val) }
 
+// PiLiteral represents the symbol pi.
+type PiLiteral struct{}
+
+// String returns a string representation of the literal.
+func (l *PiLiteral) String() string { return "π" }
+
 // NilLiteral represents a nil literal.
 // This is not available to the query language itself. It's only used internally.
 type NilLiteral struct{}
@@ -3626,6 +3635,8 @@ func CloneExpr(expr Expr) Expr {
 		return &NumberLiteral{Val: expr.Val}
 	case *ParenExpr:
 		return &ParenExpr{Expr: CloneExpr(expr.Expr)}
+	case *PiLiteral:
+		return &PiLiteral{}
 	case *RegexLiteral:
 		return &RegexLiteral{Val: expr.Val}
 	case *StringLiteral:
@@ -4645,6 +4656,8 @@ func reduce(expr Expr, valuer Valuer) Expr {
 		return reduceParenExpr(expr, valuer)
 	case *VarRef:
 		return reduceVarRef(expr, valuer)
+	case *PiLiteral:
+		return &NumberLiteral{Val: math.Pi}
 	case *NilLiteral:
 		return expr
 	default:

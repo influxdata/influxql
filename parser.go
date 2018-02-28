@@ -2654,6 +2654,8 @@ func (p *Parser) parseUnaryExpr() (Expr, error) {
 			return nil, err
 		}
 		return &DurationLiteral{Val: v}, nil
+	case PI:
+		return &PiLiteral{}, nil
 	case MUL:
 		wc := &Wildcard{}
 		if tok, _, _ := p.Scan(); tok == DOUBLECOLON {

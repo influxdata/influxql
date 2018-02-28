@@ -29,6 +29,7 @@ const (
 	FALSE       // false
 	REGEX       // Regular expressions
 	BADREGEX    // `.*
+	PI          // π
 	literalEnd
 
 	operatorBeg

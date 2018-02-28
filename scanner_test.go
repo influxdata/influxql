@@ -91,6 +91,7 @@ func TestScanner_Scan(t *testing.T) {
 		{s: `.23`, tok: influxql.NUMBER, lit: `.23`},
 		//{s: `.`, tok: influxql.ILLEGAL, lit: `.`},
 		{s: `10.3s`, tok: influxql.NUMBER, lit: `10.3`},
+		{s: `π`, tok: influxql.PI},
 
 		// Durations
 		{s: `10u`, tok: influxql.DURATIONVAL, lit: `10u`},

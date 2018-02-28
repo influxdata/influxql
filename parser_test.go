@@ -3417,6 +3417,7 @@ func TestParser_ParseExpr(t *testing.T) {
 		{s: `my_ident`, expr: &influxql.VarRef{Val: "my_ident"}},
 		{s: `'2000-01-01 00:00:00'`, expr: &influxql.StringLiteral{Val: "2000-01-01 00:00:00"}},
 		{s: `'2000-01-01'`, expr: &influxql.StringLiteral{Val: "2000-01-01"}},
+		{s: `π`, expr: &influxql.PiLiteral{}},
 
 		// Simple binary expression
 		{

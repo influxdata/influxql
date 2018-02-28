@@ -131,6 +131,8 @@ func (s *Scanner) Scan() (tok Token, pos Pos, lit string) {
 		}
 		s.r.unread()
 		return COLON, pos, ""
+	case 'π':
+		return PI, pos, ""
 	}
 
 	return ILLEGAL, pos, string(ch0)
