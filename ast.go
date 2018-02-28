@@ -5158,6 +5158,16 @@ func (t TimeRange) MaxTimeNano() int64 {
 // This throws an error when we encounter a time condition that is combined with OR
 // to prevent returning unexpected results that we do not support.
 func ConditionExpr(cond Expr, valuer Valuer) (Expr, TimeRange, error) {
+	expr, tr, err := conditionExpr(cond, valuer)
+	if e, ok := expr.(*BooleanLiteral); ok && e.Val {
+		// If the condition is true, return nil instead to indicate there
+		// is no condition.
+		expr = nil
+	}
+	return expr, tr, err
+}
+
+func conditionExpr(cond Expr, valuer Valuer) (Expr, TimeRange, error) {
 	if cond == nil {
 		return nil, TimeRange{}, nil
 	}
@@ -5165,12 +5175,12 @@ func ConditionExpr(cond Expr, valuer Valuer) (Expr, TimeRange, error) {
 	switch cond := cond.(type) {
 	case *BinaryExpr:
 		if cond.Op == AND || cond.Op == OR {
-			lhsExpr, lhsTime, err := ConditionExpr(cond.LHS, valuer)
+			lhsExpr, lhsTime, err := conditionExpr(cond.LHS, valuer)
 			if err != nil {
 				return nil, TimeRange{}, err
 			}
 
-			rhsExpr, rhsTime, err := ConditionExpr(cond.RHS, valuer)
+			rhsExpr, rhsTime, err := conditionExpr(cond.RHS, valuer)
 			if err != nil {
 				return nil, TimeRange{}, err
 			}
@@ -5213,9 +5223,9 @@ func ConditionExpr(cond Expr, valuer Valuer) (Expr, TimeRange, error) {
 			timeRange, err := getTimeRange(op, cond.LHS, valuer)
 			return nil, timeRange, err
 		}
-		return Reduce(cond, nil), TimeRange{}, nil
+		return Reduce(cond, valuer), TimeRange{}, nil
 	case *ParenExpr:
-		expr, timeRange, err := ConditionExpr(cond.Expr, valuer)
+		expr, timeRange, err := conditionExpr(cond.Expr, valuer)
 		if err != nil {
 			return nil, TimeRange{}, err
 		} else if expr == nil {
