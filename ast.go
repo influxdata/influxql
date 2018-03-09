@@ -5204,10 +5204,10 @@ func conditionExpr(cond Expr, valuer Valuer) (Expr, TimeRange, error) {
 
 		// If either the left or the right side is "time", we are looking at
 		// a time range.
-		if lhs, ok := cond.LHS.(*VarRef); ok && lhs.Val == "time" {
+		if lhs, ok := cond.LHS.(*VarRef); ok && strings.ToLower(lhs.Val) == "time" {
 			timeRange, err := getTimeRange(cond.Op, cond.RHS, valuer)
 			return nil, timeRange, err
-		} else if rhs, ok := cond.RHS.(*VarRef); ok && rhs.Val == "time" {
+		} else if rhs, ok := cond.RHS.(*VarRef); ok && strings.ToLower(rhs.Val) == "time" {
 			// Swap the op for the opposite if it is a comparison.
 			op := cond.Op
 			switch op {

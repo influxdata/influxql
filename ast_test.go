@@ -800,6 +800,8 @@ func TestConditionExpr(t *testing.T) {
 		{s: `'a' = 'a'`, cond: ``},
 		{s: `value > 0 OR true`, cond: ``},
 		{s: `host = 'server01' AND false`, cond: `false`},
+		{s: `TIME >= '2000-01-01T00:00:00Z'`, min: mustParseTime("2000-01-01T00:00:00Z")},
+		{s: `'2000-01-01T00:00:00Z' <= TIME`, min: mustParseTime("2000-01-01T00:00:00Z")},
 	} {
 		t.Run(tt.s, func(t *testing.T) {
 			expr, err := influxql.ParseExpr(tt.s)
