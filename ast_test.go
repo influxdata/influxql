@@ -1171,7 +1171,7 @@ func TestReduce(t *testing.T) {
 	for i, tt := range []struct {
 		in   string
 		out  string
-		data Valuer
+		data influxql.MapValuer
 	}{
 		// Number literals.
 		{in: `1 + 2`, out: `3`},
@@ -1237,21 +1237,20 @@ func TestReduce(t *testing.T) {
 		{in: `true + false`, out: `true + false`},
 
 		// Time literals with now().
-		{in: `now() + 2h`, out: `'2000-01-01T02:00:00Z'`, data: map[string]interface{}{"now()": now}},
-		{in: `now() / 2h`, out: `'2000-01-01T00:00:00Z' / 2h`, data: map[string]interface{}{"now()": now}},
-		{in: `4µ + now()`, out: `'2000-01-01T00:00:00.000004Z'`, data: map[string]interface{}{"now()": now}},
-		{in: `now() + 2000000000`, out: `'2000-01-01T00:00:02Z'`, data: map[string]interface{}{"now()": now}},
-		{in: `2000000000 + now()`, out: `'2000-01-01T00:00:02Z'`, data: map[string]interface{}{"now()": now}},
-		{in: `now() - 2000000000`, out: `'1999-12-31T23:59:58Z'`, data: map[string]interface{}{"now()": now}},
-		{in: `now() = now()`, out: `true`, data: map[string]interface{}{"now()": now}},
-		{in: `now() <> now()`, out: `false`, data: map[string]interface{}{"now()": now}},
-		{in: `now() < now() + 1h`, out: `true`, data: map[string]interface{}{"now()": now}},
-		{in: `now() <= now() + 1h`, out: `true`, data: map[string]interface{}{"now()": now}},
-		{in: `now() >= now() - 1h`, out: `true`, data: map[string]interface{}{"now()": now}},
-		{in: `now() > now() - 1h`, out: `true`, data: map[string]interface{}{"now()": now}},
-		{in: `now() - (now() - 60s)`, out: `1m`, data: map[string]interface{}{"now()": now}},
-		{in: `now() AND now()`, out: `'2000-01-01T00:00:00Z' AND '2000-01-01T00:00:00Z'`, data: map[string]interface{}{"now()": now}},
-		{in: `now()`, out: `now()`},
+		{in: `now() + 2h`, out: `'2000-01-01T02:00:00Z'`},
+		{in: `now() / 2h`, out: `'2000-01-01T00:00:00Z' / 2h`},
+		{in: `4µ + now()`, out: `'2000-01-01T00:00:00.000004Z'`},
+		{in: `now() + 2000000000`, out: `'2000-01-01T00:00:02Z'`},
+		{in: `2000000000 + now()`, out: `'2000-01-01T00:00:02Z'`},
+		{in: `now() - 2000000000`, out: `'1999-12-31T23:59:58Z'`},
+		{in: `now() = now()`, out: `true`},
+		{in: `now() <> now()`, out: `false`},
+		{in: `now() < now() + 1h`, out: `true`},
+		{in: `now() <= now() + 1h`, out: `true`},
+		{in: `now() >= now() - 1h`, out: `true`},
+		{in: `now() > now() - 1h`, out: `true`},
+		{in: `now() - (now() - 60s)`, out: `1m`},
+		{in: `now() AND now()`, out: `'2000-01-01T00:00:00Z' AND '2000-01-01T00:00:00Z'`},
 		{in: `946684800000000000 + 2h`, out: `'2000-01-01T02:00:00Z'`},
 
 		// Time literals.
@@ -1299,7 +1298,10 @@ func TestReduce(t *testing.T) {
 		{in: `foo <> 'bar'`, out: `false`, data: map[string]interface{}{"foo": nil}},
 	} {
 		// Fold expression.
-		expr := influxql.Reduce(MustParseExpr(tt.in), tt.data)
+		expr := influxql.Reduce(MustParseExpr(tt.in), influxql.MultiValuer(
+			tt.data,
+			&influxql.NowValuer{Now: now},
+		))
 
 		// Compare with expected output.
 		if out := expr.String(); tt.out != out {
@@ -1676,15 +1678,6 @@ func Test_EnforceHasDefaultDatabase(t *testing.T) {
 			}
 		}
 	}
-}
-
-// Valuer represents a simple wrapper around a map to implement the influxql.Valuer interface.
-type Valuer map[string]interface{}
-
-// Value returns the value and existence of a key.
-func (o Valuer) Value(key string) (v interface{}, ok bool) {
-	v, ok = o[key]
-	return
 }
 
 // MustTimeRange will parse a time range. Panic on error.

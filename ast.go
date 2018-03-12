@@ -3876,13 +3876,37 @@ func RewriteExpr(expr Expr, fn func(Expr) Expr) Expr {
 
 // Eval evaluates expr against a map.
 func Eval(expr Expr, m map[string]interface{}) interface{} {
+	eval := ValuerEval{Valuer: MapValuer(m)}
+	return eval.Eval(expr)
+}
+
+// MapValuer is a valuer that substitutes values for the mapped interface.
+type MapValuer map[string]interface{}
+
+// Value returns the value for a key in the MapValuer.
+func (m MapValuer) Value(key string) (interface{}, bool) {
+	v, ok := m[key]
+	return v, ok
+}
+
+// ValuerEval will evaluate an expression using the Valuer.
+type ValuerEval struct {
+	Valuer Valuer
+
+	// IntegerFloatDivision will set the eval system to treat
+	// a division between two integers as a floating point division.
+	IntegerFloatDivision bool
+}
+
+// Eval evaluates an expression and returns a value.
+func (v *ValuerEval) Eval(expr Expr) interface{} {
 	if expr == nil {
 		return nil
 	}
 
 	switch expr := expr.(type) {
 	case *BinaryExpr:
-		return evalBinaryExpr(expr, m)
+		return v.evalBinaryExpr(expr)
 	case *BooleanLiteral:
 		return expr.Val
 	case *IntegerLiteral:
@@ -3892,21 +3916,35 @@ func Eval(expr Expr, m map[string]interface{}) interface{} {
 	case *UnsignedLiteral:
 		return expr.Val
 	case *ParenExpr:
-		return Eval(expr.Expr, m)
+		return v.Eval(expr.Expr)
 	case *RegexLiteral:
 		return expr.Val
 	case *StringLiteral:
 		return expr.Val
+	case *Call:
+		if valuer, ok := v.Valuer.(CallValuer); ok {
+			val, _ := valuer.Call(expr.Name, expr.Args)
+			return val
+		}
+		return nil
 	case *VarRef:
-		return m[expr.Val]
+		val, _ := v.Valuer.Value(expr.Val)
+		return val
 	default:
 		return nil
 	}
 }
 
-func evalBinaryExpr(expr *BinaryExpr, m map[string]interface{}) interface{} {
-	lhs := Eval(expr.LHS, m)
-	rhs := Eval(expr.RHS, m)
+// EvalBool evaluates expr and returns true if result is a boolean true.
+// Otherwise returns false.
+func (v *ValuerEval) EvalBool(expr Expr) bool {
+	val, _ := v.Eval(expr).(bool)
+	return val
+}
+
+func (v *ValuerEval) evalBinaryExpr(expr *BinaryExpr) interface{} {
+	lhs := v.Eval(expr.LHS)
+	rhs := v.Eval(expr.RHS)
 	if lhs == nil && rhs != nil {
 		// When the LHS is nil and the RHS is a boolean, implicitly cast the
 		// nil to false.
@@ -4047,8 +4085,15 @@ func evalBinaryExpr(expr *BinaryExpr, m map[string]interface{}) interface{} {
 			case MUL:
 				return lhs * rhs
 			case DIV:
+				if v.IntegerFloatDivision {
+					if rhs == 0 {
+						return float64(0)
+					}
+					return float64(lhs) / float64(rhs)
+				}
+
 				if rhs == 0 {
-					return float64(0)
+					return int64(0)
 				}
 				return lhs / rhs
 			case MOD:
@@ -4439,8 +4484,10 @@ func reduceBinaryExpr(expr *BinaryExpr, valuer Valuer) Expr {
 	rhs := reduce(expr.RHS, valuer)
 
 	loc := time.UTC
-	if v, ok := valuer.(ZoneValuer); ok {
-		loc = v.Zone()
+	if valuer, ok := valuer.(ZoneValuer); ok {
+		if l := valuer.Zone(); l != nil {
+			loc = l
+		}
 	}
 
 	// Do not evaluate if one side is nil.
@@ -4955,18 +5002,20 @@ func reduceBinaryExprTimeLHS(op Token, lhs *TimeLiteral, rhs Expr, loc *time.Loc
 }
 
 func reduceCall(expr *Call, valuer Valuer) Expr {
-	// Evaluate "now()" if valuer is set.
-	if expr.Name == "now" && len(expr.Args) == 0 && valuer != nil {
-		if v, ok := valuer.Value("now()"); ok {
-			v, _ := v.(time.Time)
-			return &TimeLiteral{Val: v}
+	// Otherwise reduce arguments.
+	var args []Expr
+	if len(expr.Args) > 0 {
+		args = make([]Expr, len(expr.Args))
+		for i, arg := range expr.Args {
+			args[i] = reduce(arg, valuer)
 		}
 	}
 
-	// Otherwise reduce arguments.
-	args := make([]Expr, len(expr.Args))
-	for i, arg := range expr.Args {
-		args[i] = reduce(arg, valuer)
+	// Evaluate a function call if the valuer is a CallValuer.
+	if valuer, ok := valuer.(CallValuer); ok {
+		if v, ok := valuer.Call(expr.Name, args); ok {
+			return asLiteral(v)
+		}
 	}
 	return &Call{Name: expr.Name, Args: args}
 }
@@ -4993,6 +5042,11 @@ func reduceVarRef(expr *VarRef, valuer Valuer) Expr {
 	}
 
 	// Return the value as a literal.
+	return asLiteral(v)
+}
+
+// asLiteral takes an interface and converts it into an influxql literal.
+func asLiteral(v interface{}) Literal {
 	switch v := v.(type) {
 	case bool:
 		return &BooleanLiteral{Val: v}
@@ -5000,6 +5054,8 @@ func reduceVarRef(expr *VarRef, valuer Valuer) Expr {
 		return &DurationLiteral{Val: v}
 	case float64:
 		return &NumberLiteral{Val: v}
+	case int64:
+		return &IntegerLiteral{Val: v}
 	case string:
 		return &StringLiteral{Val: v}
 	case time.Time:
@@ -5015,9 +5071,20 @@ type Valuer interface {
 	Value(key string) (interface{}, bool)
 }
 
+// CallValuer implements the Call method for evaluating function calls.
+type CallValuer interface {
+	Valuer
+
+	// Call is invoked to evaluate a function call (if possible).
+	Call(name string, args []Expr) (interface{}, bool)
+}
+
 // ZoneValuer is the interface that specifies the current time zone.
 type ZoneValuer interface {
-	// Zone returns the time zone location.
+	Valuer
+
+	// Zone returns the time zone location. This function may return nil
+	// if no time zone is known.
 	Zone() *time.Location
 }
 
@@ -5035,12 +5102,59 @@ func (v *NowValuer) Value(key string) (interface{}, bool) {
 	return nil, false
 }
 
+// Call evaluates the now() function to replace now() with the current time.
+func (v *NowValuer) Call(name string, args []Expr) (interface{}, bool) {
+	if name == "now" && len(args) == 0 {
+		return v.Now, true
+	}
+	return nil, false
+}
+
 // Zone is a method that returns the time.Location.
 func (v *NowValuer) Zone() *time.Location {
 	if v.Location != nil {
 		return v.Location
 	}
-	return time.UTC
+	return nil
+}
+
+// MultiValuer returns a Valuer that iterates over multiple Valuer instances
+// to find a match.
+func MultiValuer(valuers ...Valuer) Valuer {
+	return multiValuer(valuers)
+}
+
+type multiValuer []Valuer
+
+func (a multiValuer) Value(key string) (interface{}, bool) {
+	for _, valuer := range a {
+		if v, ok := valuer.Value(key); ok {
+			return v, true
+		}
+	}
+	return nil, false
+}
+
+func (a multiValuer) Call(name string, args []Expr) (interface{}, bool) {
+	for _, valuer := range a {
+		if valuer, ok := valuer.(CallValuer); ok {
+			if v, ok := valuer.Call(name, args); ok {
+				return v, true
+			}
+		}
+	}
+	return nil, false
+}
+
+func (a multiValuer) Zone() *time.Location {
+	for _, valuer := range a {
+		if valuer, ok := valuer.(ZoneValuer); ok {
+			if v := valuer.Zone(); v != nil {
+				return v
+			}
+		}
+	}
+	return nil
 }
 
 // ContainsVarRef returns true if expr is a VarRef or contains one.
@@ -5247,10 +5361,9 @@ func getTimeRange(op Token, rhs Expr, valuer Valuer) (TimeRange, error) {
 	if strlit, ok := rhs.(*StringLiteral); ok {
 		if strlit.IsTimeLiteral() {
 			var loc *time.Location
-			if v, ok := valuer.(ZoneValuer); ok {
-				loc = v.Zone()
+			if valuer, ok := valuer.(ZoneValuer); ok {
+				loc = valuer.Zone()
 			}
-
 			t, err := strlit.ToTimeLiteral(loc)
 			if err != nil {
 				return TimeRange{}, err
