@@ -1080,11 +1080,25 @@ func (e EvalFixture) MapType(measurement *influxql.Measurement, field string) in
 	return m[field]
 }
 
+func (e EvalFixture) CallType(name string, args []influxql.DataType) (influxql.DataType, error) {
+	switch name {
+	case "mean", "median", "integral", "stddev":
+		return influxql.Float, nil
+	case "count":
+		return influxql.Integer, nil
+	case "elapsed":
+		return influxql.Integer, nil
+	default:
+		return args[0], nil
+	}
+}
+
 func TestEvalType(t *testing.T) {
 	for i, tt := range []struct {
 		name string
 		in   string
 		typ  influxql.DataType
+		err  string
 		data EvalFixture
 	}{
 		{
@@ -1150,6 +1164,48 @@ func TestEvalType(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: `binary expression with a float and integer`,
+			in:   `v1 + v2`,
+			typ:  influxql.Float,
+			data: EvalFixture{
+				"cpu": map[string]influxql.DataType{
+					"v1": influxql.Float,
+					"v2": influxql.Integer,
+				},
+			},
+		},
+		{
+			name: `integer and unsigned literal`,
+			in:   `value + 9223372036854775808`,
+			err:  `type error: value + 9223372036854775808: cannot use + with an integer and unsigned literal`,
+			data: EvalFixture{
+				"cpu": map[string]influxql.DataType{
+					"value": influxql.Integer,
+				},
+			},
+		},
+		{
+			name: `unsigned and integer literal`,
+			in:   `value + 1`,
+			typ:  influxql.Unsigned,
+			data: EvalFixture{
+				"cpu": map[string]influxql.DataType{
+					"value": influxql.Unsigned,
+				},
+			},
+		},
+		{
+			name: `incompatible types`,
+			in:   `v1 + v2`,
+			err:  `type error: v1 + v2: incompatible types: string and integer`,
+			data: EvalFixture{
+				"cpu": map[string]influxql.DataType{
+					"v1": influxql.String,
+					"v2": influxql.Integer,
+				},
+			},
+		},
 	} {
 		sources := make([]influxql.Source, 0, len(tt.data))
 		for src := range tt.data {
@@ -1157,8 +1213,16 @@ func TestEvalType(t *testing.T) {
 		}
 
 		expr := influxql.MustParseExpr(tt.in)
-		typ := influxql.EvalType(expr, sources, tt.data)
-		if typ != tt.typ {
+		valuer := influxql.TypeValuerEval{
+			TypeMapper: tt.data,
+			Sources:    sources,
+		}
+		typ, err := valuer.EvalType(expr)
+		if err != nil {
+			if exp, got := tt.err, err.Error(); exp != got {
+				t.Errorf("%d. %s: unexpected error:\n\nexp=%#v\n\ngot=%v\n\n", i, tt.name, exp, got)
+			}
+		} else if typ != tt.typ {
 			t.Errorf("%d. %s: unexpected type:\n\nexp=%#v\n\ngot=%#v\n\n", i, tt.name, tt.typ, typ)
 		}
 	}
@@ -1720,6 +1784,19 @@ func (fm *FieldMapper) MapType(m *influxql.Measurement, field string) influxql.D
 		return influxql.Tag
 	}
 	return influxql.Unknown
+}
+
+func (fm *FieldMapper) CallType(name string, args []influxql.DataType) (influxql.DataType, error) {
+	switch name {
+	case "mean", "median", "integral", "stddev":
+		return influxql.Float, nil
+	case "count":
+		return influxql.Integer, nil
+	case "elapsed":
+		return influxql.Integer, nil
+	default:
+		return args[0], nil
+	}
 }
 
 // BenchmarkExprNames benchmarks how long it takes to run ExprNames.

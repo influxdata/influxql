@@ -111,6 +111,39 @@ func (d DataType) LessThan(other DataType) bool {
 	return other != Unknown && other < d
 }
 
+var (
+	zeroFloat64  interface{} = float64(0)
+	zeroInt64    interface{} = int64(0)
+	zeroUint64   interface{} = uint64(0)
+	zeroString   interface{} = ""
+	zeroBoolean  interface{} = false
+	zeroTime     interface{} = time.Time{}
+	zeroDuration interface{} = time.Duration(0)
+)
+
+// Zero returns the zero value for the DataType.
+// The return value of this method, when sent back to InspectDataType,
+// may not produce the same value.
+func (d DataType) Zero() interface{} {
+	switch d {
+	case Float:
+		return zeroFloat64
+	case Integer:
+		return zeroInt64
+	case Unsigned:
+		return zeroUint64
+	case String, Tag:
+		return zeroString
+	case Boolean:
+		return zeroBoolean
+	case Time:
+		return zeroTime
+	case Duration:
+		return zeroDuration
+	}
+	return nil
+}
+
 // String returns the human-readable string representation of the DataType.
 func (d DataType) String() string {
 	switch d {
@@ -4327,34 +4360,109 @@ type TypeMapper interface {
 	MapType(measurement *Measurement, field string) DataType
 }
 
+// CallTypeMapper maps a data type to the function call.
+type CallTypeMapper interface {
+	TypeMapper
+
+	CallType(name string, args []DataType) (DataType, error)
+}
+
 type nilTypeMapper struct{}
 
 func (nilTypeMapper) MapType(*Measurement, string) DataType { return Unknown }
 
-// EvalType evaluates the expression's type.
-func EvalType(expr Expr, sources Sources, typmap TypeMapper) DataType {
-	if typmap == nil {
-		typmap = nilTypeMapper{}
-	}
+type multiTypeMapper []TypeMapper
 
+// MultiTypeMapper combines multiple TypeMappers into a single one.
+// The MultiTypeMapper will return the first type that is not Unknown.
+// It will not iterate through all of them to find the highest priority one.
+func MultiTypeMapper(mappers ...TypeMapper) TypeMapper {
+	return multiTypeMapper(mappers)
+}
+
+func (a multiTypeMapper) MapType(measurement *Measurement, field string) DataType {
+	for _, m := range a {
+		if typ := m.MapType(measurement, field); typ != Unknown {
+			return typ
+		}
+	}
+	return Unknown
+}
+
+func (a multiTypeMapper) CallType(name string, args []DataType) (DataType, error) {
+	for _, m := range a {
+		call, ok := m.(CallTypeMapper)
+		if ok {
+			typ, err := call.CallType(name, args)
+			if err != nil {
+				return Unknown, err
+			} else if typ != Unknown {
+				return typ, nil
+			}
+		}
+	}
+	return Unknown, nil
+}
+
+// TypeValuerEval evaluates an expression to determine its output type.
+type TypeValuerEval struct {
+	TypeMapper TypeMapper
+	Sources    Sources
+}
+
+// EvalType returns the type for an expression. If the expression cannot
+// be evaluated for some reason, like incompatible types, it is returned
+// as a TypeError in the error. If the error is non-fatal so we can continue
+// even though an error happened, true will be returned.
+// This function assumes that the expression has already been reduced.
+func (v *TypeValuerEval) EvalType(expr Expr) (DataType, error) {
 	switch expr := expr.(type) {
 	case *VarRef:
-		// If this variable already has an assigned type, just use that.
-		if expr.Type != Unknown && expr.Type != AnyField {
-			return expr.Type
-		}
+		return v.evalVarRefExprType(expr)
+	case *Call:
+		return v.evalCallExprType(expr)
+	case *BinaryExpr:
+		return v.evalBinaryExprType(expr)
+	case *ParenExpr:
+		return v.EvalType(expr.Expr)
+	case *NumberLiteral:
+		return Float, nil
+	case *IntegerLiteral:
+		return Integer, nil
+	case *UnsignedLiteral:
+		return Unsigned, nil
+	case *StringLiteral:
+		return String, nil
+	case *BooleanLiteral:
+		return Boolean, nil
+	}
+	return Unknown, nil
+}
 
-		var typ DataType
-		for _, src := range sources {
+func (v *TypeValuerEval) evalVarRefExprType(expr *VarRef) (DataType, error) {
+	// If this variable already has an assigned type, just use that.
+	if expr.Type != Unknown && expr.Type != AnyField {
+		return expr.Type, nil
+	}
+
+	var typ DataType
+	if v.TypeMapper != nil {
+		for _, src := range v.Sources {
 			switch src := src.(type) {
 			case *Measurement:
-				if t := typmap.MapType(src, expr.Val); typ.LessThan(t) {
+				if t := v.TypeMapper.MapType(src, expr.Val); typ.LessThan(t) {
 					typ = t
 				}
 			case *SubQuery:
 				_, e := src.Statement.FieldExprByName(expr.Val)
 				if e != nil {
-					if t := EvalType(e, src.Statement.Sources, typmap); typ.LessThan(t) {
+					valuer := TypeValuerEval{
+						TypeMapper: v.TypeMapper,
+						Sources:    src.Statement.Sources,
+					}
+					if t, err := valuer.EvalType(e); err != nil {
+						return Unknown, err
+					} else if typ.LessThan(t) {
 						typ = t
 					}
 				}
@@ -4368,40 +4476,107 @@ func EvalType(expr Expr, sources Sources, typmap TypeMapper) DataType {
 				}
 			}
 		}
-		return typ
-	case *Call:
-		switch expr.Name {
-		case "mean", "median", "integral", "stddev":
-			return Float
-		case "count":
-			return Integer
-		case "elapsed":
-			return Integer
-		default:
-			return EvalType(expr.Args[0], sources, typmap)
+	}
+	return typ, nil
+}
+
+func (v *TypeValuerEval) evalCallExprType(expr *Call) (DataType, error) {
+	typmap, ok := v.TypeMapper.(CallTypeMapper)
+	if !ok {
+		return Unknown, nil
+	}
+
+	// Evaluate all of the data types for the arguments.
+	args := make([]DataType, len(expr.Args))
+	for i, arg := range expr.Args {
+		typ, err := v.EvalType(arg)
+		if err != nil {
+			return Unknown, err
 		}
-	case *ParenExpr:
-		return EvalType(expr.Expr, sources, typmap)
-	case *NumberLiteral:
-		return Float
-	case *IntegerLiteral:
-		return Integer
-	case *UnsignedLiteral:
-		return Unsigned
-	case *StringLiteral:
-		return String
-	case *BooleanLiteral:
-		return Boolean
-	case *BinaryExpr:
-		lhs := EvalType(expr.LHS, sources, typmap)
-		rhs := EvalType(expr.RHS, sources, typmap)
-		if rhs.LessThan(lhs) {
-			return lhs
-		} else {
-			return rhs
+		args[i] = typ
+	}
+
+	// Pass in the data types for the call so it can be type checked and
+	// the resulting type can be returned.
+	return typmap.CallType(expr.Name, args)
+}
+
+func (v *TypeValuerEval) evalBinaryExprType(expr *BinaryExpr) (DataType, error) {
+	// Find the data type for both sides of the expression.
+	lhs, err := v.EvalType(expr.LHS)
+	if err != nil {
+		return Unknown, err
+	}
+	rhs, err := v.EvalType(expr.RHS)
+	if err != nil {
+		return Unknown, err
+	}
+
+	// If one of the two is unsigned and the other is an integer, we need
+	// to see if the one that is unsigned is a literal. We cannot add an unsigned
+	// literal to an integer.
+	if lhs == Unsigned && rhs == Integer && isLiteral(expr.LHS) || lhs == Integer && rhs == Unsigned && isLiteral(expr.RHS) {
+		return Unknown, &TypeError{
+			Expr:    expr,
+			Message: fmt.Sprintf("cannot use %s with an integer and unsigned literal", expr.Op),
 		}
 	}
-	return Unknown
+
+	// If one of the two is unknown, then return the other as the type.
+	if lhs == Unknown {
+		return rhs, nil
+	} else if rhs == Unknown {
+		return lhs, nil
+	}
+
+	// Rather than re-implement the ValuerEval here, we create a dummy binary
+	// expression with the zero values and inspect the resulting value back into
+	// a data type to determine the output.
+	e := BinaryExpr{
+		LHS: &VarRef{Val: "lhs"},
+		RHS: &VarRef{Val: "rhs"},
+		Op:  expr.Op,
+	}
+	result := Eval(&e, map[string]interface{}{
+		"lhs": lhs.Zero(),
+		"rhs": rhs.Zero(),
+	})
+
+	typ := InspectDataType(result)
+	if typ == Unknown {
+		// If the type is unknown, then the two types were not compatible.
+		return Unknown, &TypeError{
+			Expr:    expr,
+			Message: fmt.Sprintf("incompatible types: %s and %s", lhs, rhs),
+		}
+	}
+	return typ, nil
+}
+
+// TypeError is an error when two types are incompatible.
+type TypeError struct {
+	// Expr contains the expression that generated the type error.
+	Expr Expr
+	// Message contains the informational message about the type error.
+	Message string
+}
+
+func (e *TypeError) Error() string {
+	return fmt.Sprintf("type error: %s: %s", e.Expr, e.Message)
+}
+
+// EvalType evaluates the expression's type.
+func EvalType(expr Expr, sources Sources, typmap TypeMapper) DataType {
+	if typmap == nil {
+		typmap = nilTypeMapper{}
+	}
+
+	valuer := TypeValuerEval{
+		TypeMapper: typmap,
+		Sources:    sources,
+	}
+	typ, _ := valuer.EvalType(expr)
+	return typ
 }
 
 func FieldDimensions(sources Sources, m FieldMapper) (fields map[string]DataType, dimensions map[string]struct{}, err error) {
@@ -5063,6 +5238,12 @@ func asLiteral(v interface{}) Literal {
 	default:
 		return &NilLiteral{}
 	}
+}
+
+// isLiteral returns if the expression is a literal.
+func isLiteral(expr Expr) bool {
+	_, ok := expr.(Literal)
+	return ok
 }
 
 // Valuer is the interface that wraps the Value() method.
