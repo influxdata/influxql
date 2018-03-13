@@ -4512,13 +4512,31 @@ func (v *TypeValuerEval) evalBinaryExprType(expr *BinaryExpr) (DataType, error) 
 		return Unknown, err
 	}
 
-	// If one of the two is unsigned and the other is an integer, we need
-	// to see if the one that is unsigned is a literal. We cannot add an unsigned
-	// literal to an integer.
-	if lhs == Unsigned && rhs == Integer && isLiteral(expr.LHS) || lhs == Integer && rhs == Unsigned && isLiteral(expr.RHS) {
-		return Unknown, &TypeError{
-			Expr:    expr,
-			Message: fmt.Sprintf("cannot use %s with an integer and unsigned literal", expr.Op),
+	// If one of the two is unsigned and the other is an integer, we cannot add
+	// the two without an explicit cast unless the integer is a literal.
+	if lhs == Unsigned && rhs == Integer {
+		if isLiteral(expr.LHS) {
+			return Unknown, &TypeError{
+				Expr:    expr,
+				Message: fmt.Sprintf("cannot use %s with an integer and unsigned literal", expr.Op),
+			}
+		} else if !isLiteral(expr.RHS) {
+			return Unknown, &TypeError{
+				Expr:    expr,
+				Message: fmt.Sprintf("cannot use %s between an integer and unsigned, an explicit cast is required", expr.Op),
+			}
+		}
+	} else if lhs == Integer && rhs == Unsigned {
+		if isLiteral(expr.RHS) {
+			return Unknown, &TypeError{
+				Expr:    expr,
+				Message: fmt.Sprintf("cannot use %s with an integer and unsigned literal", expr.Op),
+			}
+		} else if !isLiteral(expr.LHS) {
+			return Unknown, &TypeError{
+				Expr:    expr,
+				Message: fmt.Sprintf("cannot use %s between an integer and unsigned, an explicit cast is required", expr.Op),
+			}
 		}
 	}
 
