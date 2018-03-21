@@ -42,6 +42,28 @@ func TestInspectDataType(t *testing.T) {
 	}
 }
 
+func TestDataTypeFromString(t *testing.T) {
+	for i, tt := range []struct{
+		s string
+		typ influxql.DataType
+	}{
+		{s: "float", typ: influxql.Float},
+		{s: "integer", typ: influxql.Integer},
+		{s: "unsigned", typ: influxql.Unsigned},
+		{s: "string", typ: influxql.String},
+		{s: "boolean", typ: influxql.Boolean},
+		{s: "time", typ: influxql.Time},
+		{s: "duration", typ: influxql.Duration},
+		{s: "tag", typ: influxql.Tag},
+		{s: "field", typ: influxql.AnyField},
+		{s: "foobar", typ: influxql.Unknown},
+	}{
+		if typ := influxql.DataTypeFromString(tt.s); tt.typ != typ {
+			t.Errorf("%d. %s: unexpected type: %s != %s", i, tt.s, tt.typ, typ)
+		}
+	}
+}
+
 func TestDataType_String(t *testing.T) {
 	for i, tt := range []struct {
 		typ influxql.DataType

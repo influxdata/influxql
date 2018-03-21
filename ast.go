@@ -94,6 +94,33 @@ func InspectDataType(v interface{}) DataType {
 	}
 }
 
+// DataTypeFromString returns a data type given the string representation of that
+// data type.
+func DataTypeFromString(s string) DataType {
+	switch s {
+	case "float":
+		return Float
+	case "integer":
+		return Integer
+	case "unsigned":
+		return Unsigned
+	case "string":
+		return String
+	case "boolean":
+		return Boolean
+	case "time":
+		return Time
+	case "duration":
+		return Duration
+	case "tag":
+		return Tag
+	case "field":
+		return AnyField
+	default:
+		return Unknown
+	}
+}
+
 // LessThan returns true if the other DataType has greater precedence than the
 // current data type. Unknown has the lowest precedence.
 //
