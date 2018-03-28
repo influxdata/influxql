@@ -3,6 +3,7 @@ package influxql_test
 import (
 	"fmt"
 	"go/importer"
+	"math"
 	"reflect"
 	"strings"
 	"testing"
@@ -43,8 +44,8 @@ func TestInspectDataType(t *testing.T) {
 }
 
 func TestDataTypeFromString(t *testing.T) {
-	for i, tt := range []struct{
-		s string
+	for i, tt := range []struct {
+		s   string
 		typ influxql.DataType
 	}{
 		{s: "float", typ: influxql.Float},
@@ -57,7 +58,7 @@ func TestDataTypeFromString(t *testing.T) {
 		{s: "tag", typ: influxql.Tag},
 		{s: "field", typ: influxql.AnyField},
 		{s: "foobar", typ: influxql.Unknown},
-	}{
+	} {
 		if typ := influxql.DataTypeFromString(tt.s); tt.typ != typ {
 			t.Errorf("%d. %s: unexpected type: %s != %s", i, tt.s, tt.typ, typ)
 		}
@@ -1837,5 +1838,46 @@ func BenchmarkExprNames(b *testing.B) {
 		if have, want := refs, []influxql.VarRef{{Val: "host"}}; !reflect.DeepEqual(have, want) {
 			b.Fatalf("unexpected expression names: have=%s want=%s", have, want)
 		}
+	}
+}
+
+type FunctionValuer struct{}
+
+var _ influxql.CallValuer = FunctionValuer{}
+
+func (FunctionValuer) Value(key string) (interface{}, bool) {
+	return nil, false
+}
+
+func (FunctionValuer) Call(name string, args []interface{}) (interface{}, bool) {
+	switch name {
+	case "abs":
+		arg0 := args[0].(float64)
+		return math.Abs(arg0), true
+	case "pow":
+		arg0, arg1 := args[0].(float64), args[1].(int64)
+		return math.Pow(arg0, float64(arg1)), true
+	default:
+		return nil, false
+	}
+}
+
+// BenchmarkEval benchmarks how long it takes to run Eval.
+func BenchmarkEval(b *testing.B) {
+	expr := MustParseExpr(`f1 + abs(f2) / pow(f3, 3)`)
+	valuer := influxql.ValuerEval{
+		Valuer: influxql.MultiValuer(
+			influxql.MapValuer(map[string]interface{}{
+				"f1": float64(15),
+				"f2": float64(-3),
+				"f3": float64(2),
+			}),
+			FunctionValuer{},
+		),
+	}
+
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		valuer.Eval(expr)
 	}
 }
