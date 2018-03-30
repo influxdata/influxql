@@ -3983,7 +3983,14 @@ func (v *ValuerEval) Eval(expr Expr) interface{} {
 		return expr.Val
 	case *Call:
 		if valuer, ok := v.Valuer.(CallValuer); ok {
-			val, _ := valuer.Call(expr.Name, expr.Args)
+			var args []interface{}
+			if len(expr.Args) > 0 {
+				args = make([]interface{}, len(expr.Args))
+				for i := range expr.Args {
+					args[i] = v.Eval(expr.Args[i])
+				}
+			}
+			val, _ := valuer.Call(expr.Name, args)
 			return val
 		}
 		return nil
@@ -5224,17 +5231,28 @@ func reduceBinaryExprTimeLHS(op Token, lhs *TimeLiteral, rhs Expr, loc *time.Loc
 func reduceCall(expr *Call, valuer Valuer) Expr {
 	// Otherwise reduce arguments.
 	var args []Expr
+	literalsOnly := true
 	if len(expr.Args) > 0 {
 		args = make([]Expr, len(expr.Args))
 		for i, arg := range expr.Args {
 			args[i] = reduce(arg, valuer)
+			if !isLiteral(args[i]) {
+				literalsOnly = false
+			}
 		}
 	}
 
-	// Evaluate a function call if the valuer is a CallValuer.
-	if valuer, ok := valuer.(CallValuer); ok {
-		if v, ok := valuer.Call(expr.Name, args); ok {
-			return asLiteral(v)
+	// Evaluate a function call if the valuer is a CallValuer and
+	// the arguments are only literals.
+	if literalsOnly {
+		if valuer, ok := valuer.(CallValuer); ok {
+			argVals := make([]interface{}, len(args))
+			for i := range args {
+				argVals[i] = Eval(args[i], nil)
+			}
+			if v, ok := valuer.Call(expr.Name, argVals); ok {
+				return asLiteral(v)
+			}
 		}
 	}
 	return &Call{Name: expr.Name, Args: args}
@@ -5302,7 +5320,7 @@ type CallValuer interface {
 	Valuer
 
 	// Call is invoked to evaluate a function call (if possible).
-	Call(name string, args []Expr) (interface{}, bool)
+	Call(name string, args []interface{}) (interface{}, bool)
 }
 
 // ZoneValuer is the interface that specifies the current time zone.
@@ -5313,6 +5331,9 @@ type ZoneValuer interface {
 	// if no time zone is known.
 	Zone() *time.Location
 }
+
+var _ CallValuer = (*NowValuer)(nil)
+var _ ZoneValuer = (*NowValuer)(nil)
 
 // NowValuer returns only the value for "now()".
 type NowValuer struct {
@@ -5329,7 +5350,7 @@ func (v *NowValuer) Value(key string) (interface{}, bool) {
 }
 
 // Call evaluates the now() function to replace now() with the current time.
-func (v *NowValuer) Call(name string, args []Expr) (interface{}, bool) {
+func (v *NowValuer) Call(name string, args []interface{}) (interface{}, bool) {
 	if name == "now" && len(args) == 0 {
 		return v.Now, true
 	}
@@ -5352,6 +5373,9 @@ func MultiValuer(valuers ...Valuer) Valuer {
 
 type multiValuer []Valuer
 
+var _ CallValuer = multiValuer(nil)
+var _ ZoneValuer = multiValuer(nil)
+
 func (a multiValuer) Value(key string) (interface{}, bool) {
 	for _, valuer := range a {
 		if v, ok := valuer.Value(key); ok {
@@ -5361,7 +5385,7 @@ func (a multiValuer) Value(key string) (interface{}, bool) {
 	return nil, false
 }
 
-func (a multiValuer) Call(name string, args []Expr) (interface{}, bool) {
+func (a multiValuer) Call(name string, args []interface{}) (interface{}, bool) {
 	for _, valuer := range a {
 		if valuer, ok := valuer.(CallValuer); ok {
 			if v, ok := valuer.Call(name, args); ok {
