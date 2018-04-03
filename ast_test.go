@@ -825,6 +825,8 @@ func TestConditionExpr(t *testing.T) {
 		{s: `host = 'server01' AND false`, cond: `false`},
 		{s: `TIME >= '2000-01-01T00:00:00Z'`, min: mustParseTime("2000-01-01T00:00:00Z")},
 		{s: `'2000-01-01T00:00:00Z' <= TIME`, min: mustParseTime("2000-01-01T00:00:00Z")},
+		{s: `(host = 'server01' OR host = 'server02') AND region = 'uswest'`,
+			cond: `(host = 'server01' OR host = 'server02') AND region = 'uswest'`},
 	} {
 		t.Run(tt.s, func(t *testing.T) {
 			expr, err := influxql.ParseExpr(tt.s)
