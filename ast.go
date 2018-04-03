@@ -5559,8 +5559,20 @@ func conditionExpr(cond Expr, valuer Valuer) (Expr, TimeRange, error) {
 			} else if lhsExpr == nil {
 				return rhsExpr, timeRange, nil
 			}
+
+			// Check the precedence and determine if we need to wrap
+			// either side in parenthesis. We strip all unnecessary parenthesis
+			// in the ParenExpr part of this function so this is needed to ensure
+			// that the expression is still output with String() correctly.
+			op := cond.Op
+			if e, ok := lhsExpr.(*BinaryExpr); ok && e.Op.Precedence() < op.Precedence() {
+				lhsExpr = &ParenExpr{Expr: lhsExpr}
+			}
+			if e, ok := rhsExpr.(*BinaryExpr); ok && e.Op.Precedence() <= op.Precedence() {
+				rhsExpr = &ParenExpr{Expr: rhsExpr}
+			}
 			return Reduce(&BinaryExpr{
-				Op:  cond.Op,
+				Op:  op,
 				LHS: lhsExpr,
 				RHS: rhsExpr,
 			}, nil), timeRange, nil
@@ -5595,7 +5607,7 @@ func conditionExpr(cond Expr, valuer Valuer) (Expr, TimeRange, error) {
 		} else if expr == nil {
 			return nil, timeRange, nil
 		}
-		return Reduce(&ParenExpr{Expr: expr}, nil), timeRange, nil
+		return expr, timeRange, nil
 	case *BooleanLiteral:
 		return cond, TimeRange{}, nil
 	default:
