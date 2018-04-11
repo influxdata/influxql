@@ -1418,68 +1418,170 @@ func (s *SelectStatement) RewriteRegexConditions() {
 		// Handle regex-based condition.
 		rhs := be.RHS.(*RegexLiteral) // This must be a regex.
 
-		val, ok := matchExactRegex(rhs.Val.String())
+		vals, ok := matchExactRegex(rhs.Val.String())
 		if !ok {
 			// Regex didn't match.
 			return e
 		}
 
-		// Remove leading and trailing ^ and $.
-		be.RHS = &StringLiteral{Val: val}
-
 		// Update the condition operator.
+		var concatOp Token
 		if be.Op == EQREGEX {
 			be.Op = EQ
+			concatOp = OR
 		} else {
 			be.Op = NEQ
+			concatOp = AND
+		}
+
+		// Remove leading and trailing ^ and $.
+		switch {
+		case len(vals) == 0:
+			be.RHS = &StringLiteral{}
+		case len(vals) == 1:
+			be.RHS = &StringLiteral{Val: vals[0]}
+		default:
+			expr := &BinaryExpr{
+				Op:  be.Op,
+				LHS: be.LHS,
+				RHS: &StringLiteral{Val: vals[0]},
+			}
+			for i := 1; i < len(vals); i++ {
+				expr = &BinaryExpr{
+					Op:  concatOp,
+					LHS: expr,
+					RHS: &BinaryExpr{
+						Op:  be.Op,
+						LHS: be.LHS,
+						RHS: &StringLiteral{Val: vals[i]},
+					},
+				}
+			}
+			return &ParenExpr{Expr: expr}
 		}
 		return be
 	})
+
+	// Unwrap any top level parenthesis.
+	if cond, ok := s.Condition.(*ParenExpr); ok {
+		s.Condition = cond.Expr
+	}
 }
 
-// matchExactRegex matches regexes that have the following form: /^foo$/. It
-// considers /^$/ to be a matching regex.
-func matchExactRegex(v string) (string, bool) {
+// matchExactRegex matches regexes into literals if possible. This will match the
+// pattern /^foo$/ or /^(foo|bar)$/. It considers /^$/ to be a matching regex.
+func matchExactRegex(v string) ([]string, bool) {
 	re, err := syntax.Parse(v, syntax.Perl)
 	if err != nil {
 		// Nothing we can do or log.
-		return "", false
+		return nil, false
 	}
+	re = re.Simplify()
 
 	if re.Op != syntax.OpConcat {
-		return "", false
+		return nil, false
 	}
 
-	if len(re.Sub) < 2 || len(re.Sub) > 3 {
-		// Regex has too few or too many subexpressions.
-		return "", false
+	if len(re.Sub) < 2 {
+		// Regex has too few subexpressions.
+		return nil, false
 	}
 
 	start := re.Sub[0]
 	if !(start.Op == syntax.OpBeginLine || start.Op == syntax.OpBeginText) {
 		// Regex does not begin with ^
-		return "", false
+		return nil, false
 	}
 
 	end := re.Sub[len(re.Sub)-1]
 	if !(end.Op == syntax.OpEndLine || end.Op == syntax.OpEndText) {
 		// Regex does not end with $
-		return "", false
+		return nil, false
 	}
 
-	if len(re.Sub) == 3 {
-		middle := re.Sub[1]
-		if middle.Op != syntax.OpLiteral || middle.Flags^syntax.Perl != 0 {
-			// Regex does not contain a literal op.
-			return "", false
+	// Remove the begin and end text from the regex.
+	re.Sub = re.Sub[1 : len(re.Sub)-1]
+
+	if len(re.Sub) == 0 {
+		// The regex /^$/
+		return nil, true
+	}
+	return matchRegex(re)
+}
+
+// matchRegex will match a regular expression to literals if possible.
+func matchRegex(re *syntax.Regexp) ([]string, bool) {
+	switch re.Op {
+	case syntax.OpLiteral:
+		// We can rewrite this regex.
+		return []string{string(re.Rune)}, true
+	case syntax.OpCapture:
+		return matchRegex(re.Sub[0])
+	case syntax.OpConcat:
+		// Go through each of the subs and concatenate the result to each one.
+		names, ok := matchRegex(re.Sub[0])
+		if !ok {
+			return nil, false
 		}
 
-		// We can rewrite this regex.
-		return string(middle.Rune), true
-	}
+		for _, sub := range re.Sub[1:] {
+			vals, ok := matchRegex(sub)
+			if !ok {
+				return nil, false
+			}
 
-	// The regex /^$/
-	return "", true
+			// If there is only one value, concatenate it to all strings rather
+			// than allocate a new slice.
+			if len(vals) == 1 {
+				for i := range names {
+					names[i] += vals[0]
+				}
+				continue
+			} else if len(names) == 1 {
+				// If there is only one value, then do this concatenation in
+				// the opposite direction.
+				for i := range vals {
+					vals[i] = names[0] + vals[i]
+				}
+				names = vals
+				continue
+			}
+
+			// The long method of using multiple concatenations.
+			concat := make([]string, len(names)*len(vals))
+			for i := range names {
+				for j := range vals {
+					concat[i*len(names)+j] = names[i] + vals[j]
+				}
+			}
+			names = concat
+		}
+		return names, true
+	case syntax.OpCharClass:
+		var sz int
+		for i := 0; i < len(re.Rune); i += 2 {
+			sz += int(re.Rune[i+1]) - int(re.Rune[i]) + 1
+		}
+
+		names := make([]string, 0, sz)
+		for i := 0; i < len(re.Rune); i += 2 {
+			for r := int(re.Rune[i]); r <= int(re.Rune[i+1]); r++ {
+				names = append(names, string([]rune{rune(r)}))
+			}
+		}
+		return names, true
+	case syntax.OpAlternate:
+		var names []string
+		for _, sub := range re.Sub {
+			vals, ok := matchRegex(sub)
+			if !ok {
+				return nil, false
+			}
+			names = append(names, vals...)
+		}
+		return names, true
+	}
+	return nil, false
 }
 
 // RewriteDistinct rewrites the expression to be a call for map/reduce to work correctly.
