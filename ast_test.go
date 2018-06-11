@@ -592,6 +592,9 @@ func TestSelectStatement_RewriteRegexConditions(t *testing.T) {
 		{in: `SELECT value FROM cpu WHERE host !~ /^a.b$/`, out: `SELECT value FROM cpu WHERE host !~ /^a.b$/`},
 		{in: `SELECT value FROM cpu WHERE host !~ /^ab+$/`, out: `SELECT value FROM cpu WHERE host !~ /^ab+$/`},
 
+		// These regexes are not supported due to the presence of unsupported regex flags.
+		{in: `SELECT value FROM cpu WHERE host =~ /(?i)^SeRvEr01$/`, out: `SELECT value FROM cpu WHERE host =~ /(?i)^SeRvEr01$/`},
+
 		// These regexes all match and will be rewritten.
 		{in: `SELECT value FROM cpu WHERE host !~ /^a[2]$/`, out: `SELECT value FROM cpu WHERE host != 'a2'`},
 		{in: `SELECT value FROM cpu WHERE host =~ /^server-1$/`, out: `SELECT value FROM cpu WHERE host = 'server-1'`},
