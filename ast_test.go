@@ -570,7 +570,7 @@ func TestSelectStatement_RewriteRegexConditions(t *testing.T) {
 		out string
 	}{
 		{in: `SELECT value FROM cpu`, out: `SELECT value FROM cpu`},
-		{in: `SELECT value FROM cpu WHERE host='server-1'`, out: `SELECT value FROM cpu WHERE host='server-1'`},
+		{in: `SELECT value FROM cpu WHERE host = 'server-1'`, out: `SELECT value FROM cpu WHERE host = 'server-1'`},
 		{in: `SELECT value FROM cpu WHERE host = 'server-1'`, out: `SELECT value FROM cpu WHERE host = 'server-1'`},
 		{in: `SELECT value FROM cpu WHERE host != 'server-1'`, out: `SELECT value FROM cpu WHERE host != 'server-1'`},
 
@@ -587,14 +587,10 @@ func TestSelectStatement_RewriteRegexConditions(t *testing.T) {
 		{in: `SELECT value FROM cpu WHERE host !~ /^a/`, out: `SELECT value FROM cpu WHERE host !~ /^a/`},
 
 		// These regexes are not supported due to the presence of escaped or meta characters.
-		{in: `SELECT value FROM cpu WHERE host !~ /^(foo|bar)$/`, out: `SELECT value FROM cpu WHERE host !~ /^(foo|bar)$/`},
 		{in: `SELECT value FROM cpu WHERE host !~ /^?a$/`, out: `SELECT value FROM cpu WHERE host !~ /^?a$/`},
-		{in: `SELECT value FROM cpu WHERE host !~ /^[a-z]$/`, out: `SELECT value FROM cpu WHERE host !~ /^[a-z]$/`},
-		{in: `SELECT value FROM cpu WHERE host !~ /^\d$/`, out: `SELECT value FROM cpu WHERE host !~ /^\d$/`},
 		{in: `SELECT value FROM cpu WHERE host !~ /^a*$/`, out: `SELECT value FROM cpu WHERE host !~ /^a*$/`},
 		{in: `SELECT value FROM cpu WHERE host !~ /^a.b$/`, out: `SELECT value FROM cpu WHERE host !~ /^a.b$/`},
 		{in: `SELECT value FROM cpu WHERE host !~ /^ab+$/`, out: `SELECT value FROM cpu WHERE host !~ /^ab+$/`},
-		{in: `SELECT value FROM cpu WHERE host =~ /^hello\world$/`, out: `SELECT value FROM cpu WHERE host =~ /^hello\world$/`},
 
 		// These regexes all match and will be rewritten.
 		{in: `SELECT value FROM cpu WHERE host !~ /^a[2]$/`, out: `SELECT value FROM cpu WHERE host != 'a2'`},
@@ -608,6 +604,12 @@ func TestSelectStatement_RewriteRegexConditions(t *testing.T) {
 		{in: `SELECT value FROM cpu WHERE host =~ /^hello\?$/`, out: `SELECT value FROM cpu WHERE host = 'hello?'`},
 		{in: `SELECT value FROM cpu WHERE host !~ /^\\$/`, out: `SELECT value FROM cpu WHERE host != '\\'`},
 		{in: `SELECT value FROM cpu WHERE host !~ /^\\\$$/`, out: `SELECT value FROM cpu WHERE host != '\\$'`},
+		// This is supported, but annoying to write and the below queries satisfy this condition.
+		//{in: `SELECT value FROM cpu WHERE host =~ /^hello\world$/`, out: `SELECT value FROM cpu WHERE host =~ /^hello\world$/`},
+		{in: `SELECT value FROM cpu WHERE host =~ /^(server-1|server-2|server-3)$/`, out: `SELECT value FROM cpu WHERE host = 'server-1' OR host = 'server-2' OR host = 'server-3'`},
+		{in: `SELECT value FROM cpu WHERE host !~ /^(foo|bar)$/`, out: `SELECT value FROM cpu WHERE host != 'foo' AND host != 'bar'`},
+		{in: `SELECT value FROM cpu WHERE host !~ /^\d$/`, out: `SELECT value FROM cpu WHERE host != '0' AND host != '1' AND host != '2' AND host != '3' AND host != '4' AND host != '5' AND host != '6' AND host != '7' AND host != '8' AND host != '9'`},
+		{in: `SELECT value FROM cpu WHERE host !~ /^[a-z]$/`, out: `SELECT value FROM cpu WHERE host != 'a' AND host != 'b' AND host != 'c' AND host != 'd' AND host != 'e' AND host != 'f' AND host != 'g' AND host != 'h' AND host != 'i' AND host != 'j' AND host != 'k' AND host != 'l' AND host != 'm' AND host != 'n' AND host != 'o' AND host != 'p' AND host != 'q' AND host != 'r' AND host != 's' AND host != 't' AND host != 'u' AND host != 'v' AND host != 'w' AND host != 'x' AND host != 'y' AND host != 'z'`},
 	}
 
 	for i, test := range tests {
