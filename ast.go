@@ -1511,6 +1511,11 @@ func matchExactRegex(v string) ([]string, bool) {
 
 // matchRegex will match a regular expression to literals if possible.
 func matchRegex(re *syntax.Regexp) ([]string, bool) {
+	// Exit if we see a case-insensitive flag as it is not something we support at this time.
+	if re.Flags&syntax.FoldCase != 0 {
+		return nil, false
+	}
+
 	switch re.Op {
 	case syntax.OpLiteral:
 		// We can rewrite this regex.
