@@ -523,7 +523,9 @@ func IsSystemName(name string) bool {
 	switch name {
 	case "_fieldKeys",
 		"_measurements",
+		"_name",
 		"_series",
+		"_tagKey",
 		"_tagKeys",
 		"_tags":
 		return true
