@@ -1558,7 +1558,7 @@ func matchRegex(re *syntax.Regexp) ([]string, bool) {
 			concat := make([]string, len(names)*len(vals))
 			for i := range names {
 				for j := range vals {
-					concat[i*len(names)+j] = names[i] + vals[j]
+					concat[i*len(vals)+j] = names[i] + vals[j]
 				}
 			}
 			names = concat
