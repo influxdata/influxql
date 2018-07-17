@@ -613,6 +613,8 @@ func TestSelectStatement_RewriteRegexConditions(t *testing.T) {
 		{in: `SELECT value FROM cpu WHERE host !~ /^(foo|bar)$/`, out: `SELECT value FROM cpu WHERE host != 'foo' AND host != 'bar'`},
 		{in: `SELECT value FROM cpu WHERE host !~ /^\d$/`, out: `SELECT value FROM cpu WHERE host != '0' AND host != '1' AND host != '2' AND host != '3' AND host != '4' AND host != '5' AND host != '6' AND host != '7' AND host != '8' AND host != '9'`},
 		{in: `SELECT value FROM cpu WHERE host !~ /^[a-z]$/`, out: `SELECT value FROM cpu WHERE host != 'a' AND host != 'b' AND host != 'c' AND host != 'd' AND host != 'e' AND host != 'f' AND host != 'g' AND host != 'h' AND host != 'i' AND host != 'j' AND host != 'k' AND host != 'l' AND host != 'm' AND host != 'n' AND host != 'o' AND host != 'p' AND host != 'q' AND host != 'r' AND host != 's' AND host != 't' AND host != 'u' AND host != 'v' AND host != 'w' AND host != 'x' AND host != 'y' AND host != 'z'`},
+
+		{in: `SELECT value FROM cpu WHERE host =~ /^[ab]{3}$/`, out: `SELECT value FROM cpu WHERE host = 'aaa' OR host = 'aab' OR host = 'aba' OR host = 'abb' OR host = 'baa' OR host = 'bab' OR host = 'bba' OR host = 'bbb'`},
 	}
 
 	for i, test := range tests {
