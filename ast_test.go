@@ -778,7 +778,7 @@ func TestConditionExpr(t *testing.T) {
 			min: mustParseTime("2000-01-01T00:00:00Z"),
 			max: mustParseTime("2000-01-01T01:00:00Z").Add(-1)},
 		{s: `host = 'server01' AND (region = 'uswest' AND time >= now() - 10m)`,
-			cond: `host = 'server01' AND region = 'uswest'`,
+			cond: `host = 'server01' AND (region = 'uswest')`,
 			min:  mustParseTime("1999-12-31T23:50:00Z")},
 		{s: `(host = 'server01' AND region = 'uswest') AND time >= now() - 10m`,
 			cond: `host = 'server01' AND region = 'uswest'`,
@@ -832,6 +832,12 @@ func TestConditionExpr(t *testing.T) {
 		{s: `host = 'server01' AND false`, cond: `false`},
 		{s: `TIME >= '2000-01-01T00:00:00Z'`, min: mustParseTime("2000-01-01T00:00:00Z")},
 		{s: `'2000-01-01T00:00:00Z' <= TIME`, min: mustParseTime("2000-01-01T00:00:00Z")},
+		// Remove enclosing parentheses
+		{s: `(host = 'server01')`, cond: `host = 'server01'`},
+		// Preserve nested parentheses
+		{s: `host = 'server01' AND (region = 'region01' OR region = 'region02')`,
+			cond: `host = 'server01' AND (region = 'region01' OR region = 'region02')`,
+		},
 	} {
 		t.Run(tt.s, func(t *testing.T) {
 			expr, err := influxql.ParseExpr(tt.s)

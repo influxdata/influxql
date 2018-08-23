@@ -5632,6 +5632,12 @@ func (t TimeRange) MaxTimeNano() int64 {
 // to prevent returning unexpected results that we do not support.
 func ConditionExpr(cond Expr, valuer Valuer) (Expr, TimeRange, error) {
 	expr, tr, err := conditionExpr(cond, valuer)
+
+	// Remove top level parentheses
+	if e, ok := expr.(*ParenExpr); ok {
+		expr = e.Expr
+	}
+
 	if e, ok := expr.(*BooleanLiteral); ok && e.Val {
 		// If the condition is true, return nil instead to indicate there
 		// is no condition.
@@ -5668,7 +5674,7 @@ func conditionExpr(cond Expr, valuer Valuer) (Expr, TimeRange, error) {
 			} else if lhsExpr == nil {
 				return rhsExpr, timeRange, nil
 			}
-			return Reduce(&BinaryExpr{
+			return reduce(&BinaryExpr{
 				Op:  cond.Op,
 				LHS: lhsExpr,
 				RHS: rhsExpr,
@@ -5696,7 +5702,7 @@ func conditionExpr(cond Expr, valuer Valuer) (Expr, TimeRange, error) {
 			timeRange, err := getTimeRange(op, cond.LHS, valuer)
 			return nil, timeRange, err
 		}
-		return Reduce(cond, valuer), TimeRange{}, nil
+		return reduce(cond, valuer), TimeRange{}, nil
 	case *ParenExpr:
 		expr, timeRange, err := conditionExpr(cond.Expr, valuer)
 		if err != nil {
@@ -5704,7 +5710,7 @@ func conditionExpr(cond Expr, valuer Valuer) (Expr, TimeRange, error) {
 		} else if expr == nil {
 			return nil, timeRange, nil
 		}
-		return Reduce(&ParenExpr{Expr: expr}, nil), timeRange, nil
+		return reduce(&ParenExpr{Expr: expr}, nil), timeRange, nil
 	case *BooleanLiteral:
 		return cond, TimeRange{}, nil
 	default:
