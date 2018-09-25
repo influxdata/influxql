@@ -256,6 +256,7 @@ func (*ShowUsersStatement) node()                  {}
 
 func (*BinaryExpr) node()      {}
 func (*BooleanLiteral) node()  {}
+func (*BoundParameter) node()  {}
 func (*Call) node()            {}
 func (*Dimension) node()       {}
 func (Dimensions) node()       {}
@@ -391,6 +392,7 @@ type Expr interface {
 
 func (*BinaryExpr) expr()      {}
 func (*BooleanLiteral) expr()  {}
+func (*BoundParameter) expr()  {}
 func (*Call) expr()            {}
 func (*Distinct) expr()        {}
 func (*DurationLiteral) expr() {}
@@ -415,6 +417,7 @@ type Literal interface {
 }
 
 func (*BooleanLiteral) literal()  {}
+func (*BoundParameter) literal()  {}
 func (*DurationLiteral) literal() {}
 func (*IntegerLiteral) literal()  {}
 func (*UnsignedLiteral) literal() {}
@@ -3646,6 +3649,18 @@ type NilLiteral struct{}
 
 // String returns a string representation of the literal.
 func (l *NilLiteral) String() string { return `nil` }
+
+// BoundParameter represents a bound parameter literal.
+// This is not available to the query language itself, but can be used when
+// constructing a query string from an AST.
+type BoundParameter struct {
+	Name string
+}
+
+// String returns a string representation of the bound parameter.
+func (bp *BoundParameter) String() string {
+	return fmt.Sprintf("$%s", QuoteIdent(bp.Name))
+}
 
 // BinaryExpr represents an operation between two expressions.
 type BinaryExpr struct {
