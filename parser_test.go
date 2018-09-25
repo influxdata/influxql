@@ -1182,6 +1182,25 @@ func TestParser_ParseStatement(t *testing.T) {
 			},
 		},
 
+		// SELECT statement with a bound parameter that contains spaces
+		{
+			s: `SELECT value FROM cpu WHERE value > $"multi-word value"`,
+			params: map[string]interface{}{
+				"multi-word value": int64(2),
+			},
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Fields: []*influxql.Field{{
+					Expr: &influxql.VarRef{Val: "value"}}},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+				Condition: &influxql.BinaryExpr{
+					Op:  influxql.GT,
+					LHS: &influxql.VarRef{Val: "value"},
+					RHS: &influxql.IntegerLiteral{Val: 2},
+				},
+			},
+		},
+
 		// SELECT statement with a subquery
 		{
 			s: `SELECT sum(derivative) FROM (SELECT derivative(value) FROM cpu GROUP BY host) WHERE time >= now() - 1d GROUP BY time(1h)`,

@@ -1672,6 +1672,40 @@ func TestShow_Privileges(t *testing.T) {
 	}
 }
 
+func TestBoundParameter_String(t *testing.T) {
+	stmt := &influxql.SelectStatement{
+		IsRawQuery: true,
+		Fields: []*influxql.Field{{
+			Expr: &influxql.VarRef{Val: "value"}}},
+		Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+		Condition: &influxql.BinaryExpr{
+			Op:  influxql.GT,
+			LHS: &influxql.VarRef{Val: "value"},
+			RHS: &influxql.BoundParameter{Name: "value"},
+		},
+	}
+
+	if got, exp := stmt.String(), `SELECT value FROM cpu WHERE value > $value`; got != exp {
+		t.Fatalf("stmt mismatch:\n\nexp=%#v\n\ngot=%#v\n\n", exp, got)
+	}
+
+	stmt = &influxql.SelectStatement{
+		IsRawQuery: true,
+		Fields: []*influxql.Field{{
+			Expr: &influxql.VarRef{Val: "value"}}},
+		Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+		Condition: &influxql.BinaryExpr{
+			Op:  influxql.GT,
+			LHS: &influxql.VarRef{Val: "value"},
+			RHS: &influxql.BoundParameter{Name: "multi-word value"},
+		},
+	}
+
+	if got, exp := stmt.String(), `SELECT value FROM cpu WHERE value > $"multi-word value"`; got != exp {
+		t.Fatalf("stmt mismatch:\n\nexp=%#v\n\ngot=%#v\n\n", exp, got)
+	}
+}
+
 // This test checks to ensure that we have given thought to the database
 // context required for security checks.  If a new statement is added, this
 // test will fail until it is categorized into the correct bucket below.
