@@ -977,7 +977,17 @@ func TestParser_ParseStatement(t *testing.T) {
 				},
 			},
 		},
-
+		// select product statements
+		{
+			s: `select product(value) from kbps`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: false,
+				Fields: []*influxql.Field{
+					{Expr: &influxql.Call{Name: "product", Args: []influxql.Expr{&influxql.VarRef{Val: "value"}}}},
+				},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "kbps"}},
+			},
+		},
 		// SELECT statement with group by
 		{
 			s: `SELECT sum(value) FROM "kbps" WHERE time > now() - 120s AND deliveryservice='steam-dns' and cachegroup = 'total' GROUP BY time(60s)`,
