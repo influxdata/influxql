@@ -1516,6 +1516,13 @@ func matchExactRegex(v string) ([]string, bool) {
 
 // matchRegex will match a regular expression to literals if possible.
 func matchRegex(re *syntax.Regexp) ([]string, bool) {
+
+	// Maximum number of literals that the expression should be expanded to. If
+	// this is exceeded, no expansion will be done. This allows reasonable
+	// optimizations of regex by expansion to literals but prevents cases
+	// where that expansion would result in a large number of literals.
+	const maxLiterals = 100
+
 	// Exit if we see a case-insensitive flag as it is not something we support at this time.
 	if re.Flags&syntax.FoldCase != 0 {
 		return nil, false
@@ -1557,8 +1564,13 @@ func matchRegex(re *syntax.Regexp) ([]string, bool) {
 				continue
 			}
 
+			sz := len(names) * len(vals)
+			if sz > maxLiterals {
+				return nil, false
+			}
+
 			// The long method of using multiple concatenations.
-			concat := make([]string, len(names)*len(vals))
+			concat := make([]string, sz)
 			for i := range names {
 				for j := range vals {
 					concat[i*len(vals)+j] = names[i] + vals[j]
@@ -1571,6 +1583,10 @@ func matchRegex(re *syntax.Regexp) ([]string, bool) {
 		var sz int
 		for i := 0; i < len(re.Rune); i += 2 {
 			sz += int(re.Rune[i+1]) - int(re.Rune[i]) + 1
+		}
+
+		if sz > maxLiterals {
+			return nil, false
 		}
 
 		names := make([]string, 0, sz)
@@ -1588,6 +1604,9 @@ func matchRegex(re *syntax.Regexp) ([]string, bool) {
 				return nil, false
 			}
 			names = append(names, vals...)
+		}
+		if len(names) > maxLiterals {
+			return nil, false
 		}
 		return names, true
 	}

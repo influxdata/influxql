@@ -476,7 +476,6 @@ func TestSelectStatement_RewriteFields(t *testing.T) {
 			stmt:    `SELECT mean(/1/) FROM cpu`,
 			rewrite: `SELECT mean(value1::float) AS mean_value1 FROM cpu`,
 		},
-
 		// Rewrite subquery
 		{
 			stmt:    `SELECT * FROM (SELECT mean(value1) FROM cpu GROUP BY host) GROUP BY *`,
@@ -594,6 +593,9 @@ func TestSelectStatement_RewriteRegexConditions(t *testing.T) {
 
 		// These regexes are not supported due to the presence of unsupported regex flags.
 		{in: `SELECT value FROM cpu WHERE host =~ /(?i)^SeRvEr01$/`, out: `SELECT value FROM cpu WHERE host =~ /(?i)^SeRvEr01$/`},
+
+		// These regexes are not supported due to large character class(es).
+		{in: `SELECT value FROM cpu WHERE host =~ /^[^abcd]$/`, out: `SELECT value FROM cpu WHERE host =~ /^[^abcd]$/`},
 
 		// These regexes all match and will be rewritten.
 		{in: `SELECT value FROM cpu WHERE host !~ /^a[2]$/`, out: `SELECT value FROM cpu WHERE host != 'a2'`},
