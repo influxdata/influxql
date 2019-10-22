@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/influxql"
+	"influxql"
 )
 
 func BenchmarkQuery_String(b *testing.B) {
@@ -1718,7 +1718,7 @@ func TestBoundParameter_String(t *testing.T) {
 // context required for security checks.  If a new statement is added, this
 // test will fail until it is categorized into the correct bucket below.
 func Test_EnforceHasDefaultDatabase(t *testing.T) {
-	pkg, err := importer.Default().Import("github.com/influxdata/influxql")
+	pkg, err := importer.Default().Import("influxql")
 	if err != nil {
 		fmt.Printf("error: %s\n", err.Error())
 		return

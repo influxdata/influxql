@@ -1,7 +1,7 @@
 pipeline {
   agent {
     docker {
-      image 'golang:1.9.2'
+      image 'golang:1.13'
     }
   }
 
@@ -10,10 +10,10 @@ pipeline {
       steps {
         sh """
         rm -f $WORKSPACE/test-results.{log,xml}
-        mkdir -p /go/src/github.com/influxdata
-        cp -a $WORKSPACE /go/src/github.com/influxdata/influxql
+        mkdir -p influxql
+        cp -a $WORKSPACE influxql
 
-        cd /go/src/github.com/influxdata/influxql
+        cd influxql
         go get -v -t
         go test -v | tee $WORKSPACE/test-results.log
         """

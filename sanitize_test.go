@@ -3,7 +3,7 @@ package influxql_test
 import (
 	"testing"
 
-	"github.com/influxdata/influxql"
+	"influxql"
 )
 
 func TestSanitize(t *testing.T) {
