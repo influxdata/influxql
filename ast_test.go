@@ -915,6 +915,116 @@ func TestRewriteExpr(t *testing.T) {
 	}
 }
 
+// Ensure an IN expr can be rewritten to OR.
+func TestRewriteIn2OrConditions(t *testing.T) {
+	var tests = []struct {
+		s         string
+		condition *influxql.BinaryExpr
+	}{
+		{
+			s: `SELECT a FROM b WHERE tag_a in ('a') and tag_b = 'b'`,
+			condition: &influxql.BinaryExpr{
+				Op: influxql.AND,
+				LHS: &influxql.ParenExpr{
+					Expr: &influxql.BinaryExpr{
+						Op: influxql.EQ,
+						LHS: &influxql.VarRef{
+							Val: "tag_a",
+						},
+						RHS: &influxql.StringLiteral{Val: "a"},
+					},
+				},
+				RHS: &influxql.BinaryExpr{
+					Op: influxql.EQ,
+					LHS: &influxql.VarRef{
+						Val: "tag_b",
+					},
+					RHS: &influxql.StringLiteral{Val: "b"},
+				},
+			},
+		},
+		{
+			s: `SELECT a FROM b WHERE tag_a in ('a', 'b', 'x') and tag_c = 'c' or tag_d = 'd' and tag_e = 'e'`,
+			condition: &influxql.BinaryExpr{
+				Op: influxql.OR,
+				LHS: &influxql.BinaryExpr{
+					Op: influxql.AND,
+					LHS: &influxql.ParenExpr{
+						Expr: &influxql.BinaryExpr{
+							Op: influxql.OR,
+							LHS: &influxql.BinaryExpr{
+								Op: influxql.OR,
+								LHS: &influxql.BinaryExpr{
+									Op: influxql.EQ,
+									LHS: &influxql.VarRef{
+										Val: "tag_a",
+									},
+									RHS: &influxql.StringLiteral{Val: "a"},
+								},
+								RHS: &influxql.BinaryExpr{
+									Op: influxql.EQ,
+									LHS: &influxql.VarRef{
+										Val: "tag_a",
+									},
+									RHS: &influxql.StringLiteral{Val: "b"},
+								},
+							},
+							RHS: &influxql.BinaryExpr{
+								Op: influxql.EQ,
+								LHS: &influxql.VarRef{
+									Val: "tag_a",
+								},
+								RHS: &influxql.StringLiteral{Val: "x"},
+							},
+						},
+					},
+					RHS: &influxql.BinaryExpr{
+						Op: influxql.EQ,
+						LHS: &influxql.VarRef{
+							Val: "tag_c",
+						},
+						RHS: &influxql.StringLiteral{Val: "c"},
+					},
+				},
+				RHS: &influxql.BinaryExpr{
+					Op: influxql.AND,
+					LHS: &influxql.BinaryExpr{
+						Op: influxql.EQ,
+						LHS: &influxql.VarRef{
+							Val: "tag_d",
+						},
+						RHS: &influxql.StringLiteral{Val: "d"},
+					},
+					RHS: &influxql.BinaryExpr{
+						Op: influxql.EQ,
+						LHS: &influxql.VarRef{
+							Val: "tag_e",
+						},
+						RHS: &influxql.StringLiteral{Val: "e"},
+					},
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		q, err := influxql.NewParser(strings.NewReader(test.s)).ParseQuery()
+		if err != nil {
+			t.Fatalf("unexpected error: %s", err)
+		}
+		if len(q.Statements) != 1 {
+			t.Fatalf("statments len should eq 1, bug got:%v", len(q.Statements))
+		}
+
+		ss := q.Statements[0].(*influxql.SelectStatement)
+		ss.RewriteIn2OrConditions()
+
+		if !reflect.DeepEqual(ss.Condition, test.condition) {
+			t.Fatalf("parsed condition not eq expected condition, cond:%+v, test.condition:%+v", ss.Condition, *test.condition)
+		}
+	}
+}
+
 // Ensure that the String() value of a statement is parseable
 func TestParseString(t *testing.T) {
 	var tests = []struct {

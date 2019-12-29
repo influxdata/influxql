@@ -49,7 +49,53 @@ func TestParser_ParseInQuery(t *testing.T) {
 			},
 		},
 		{
-			s: `SELECT a FROM b WHERE (tag_a = 'a' or tag_a = 'b') and tag_c = 'c' or tag_d = 'd' and tag_e = 'e'`,
+			s: `SELECT a FROM b WHERE (tag_a = 'a') and tag_b = 'b'`,
+			condition: &influxql.BinaryExpr{
+				Op: influxql.AND,
+				LHS: &influxql.ParenExpr{
+					Expr: &influxql.BinaryExpr{
+						Op: influxql.EQ,
+						LHS: &influxql.VarRef{
+							Val: "tag_a",
+						},
+						RHS: &influxql.StringLiteral{Val: "a"},
+					},
+				},
+				RHS: &influxql.BinaryExpr{
+					Op: influxql.EQ,
+					LHS: &influxql.VarRef{
+						Val: "tag_b",
+					},
+					RHS: &influxql.StringLiteral{Val: "b"},
+				},
+			},
+		},
+		{
+			s: `SELECT a FROM b WHERE tag_a in ('a') and tag_b = 'b'`,
+			condition: &influxql.BinaryExpr{
+				Op: influxql.AND,
+				LHS: &influxql.BinaryExpr{
+					Op: influxql.IN,
+					LHS: &influxql.VarRef{
+						Val: "tag_a",
+					},
+					RHS: &influxql.ListValExpr{
+						Vals: []influxql.Expr{
+							&influxql.StringLiteral{Val: "a"},
+						},
+					},
+				},
+				RHS: &influxql.BinaryExpr{
+					Op: influxql.EQ,
+					LHS: &influxql.VarRef{
+						Val: "tag_b",
+					},
+					RHS: &influxql.StringLiteral{Val: "b"},
+				},
+			},
+		},
+		{
+			s: `SELECT a FROM b WHERE (tag_a = 'a' or tag_a = 'b' or tag_a = 'x') and tag_c = 'c' or tag_d = 'd' and tag_e = 'e'`,
 			condition: &influxql.BinaryExpr{
 				Op: influxql.OR,
 				LHS: &influxql.BinaryExpr{
@@ -58,18 +104,28 @@ func TestParser_ParseInQuery(t *testing.T) {
 						Expr: &influxql.BinaryExpr{
 							Op: influxql.OR,
 							LHS: &influxql.BinaryExpr{
-								Op: influxql.EQ,
-								LHS: &influxql.VarRef{
-									Val: "tag_a",
+								Op: influxql.OR,
+								LHS: &influxql.BinaryExpr{
+									Op: influxql.EQ,
+									LHS: &influxql.VarRef{
+										Val: "tag_a",
+									},
+									RHS: &influxql.StringLiteral{Val: "a"},
 								},
-								RHS: &influxql.StringLiteral{Val: "a"},
+								RHS: &influxql.BinaryExpr{
+									Op: influxql.EQ,
+									LHS: &influxql.VarRef{
+										Val: "tag_a",
+									},
+									RHS: &influxql.StringLiteral{Val: "b"},
+								},
 							},
 							RHS: &influxql.BinaryExpr{
 								Op: influxql.EQ,
 								LHS: &influxql.VarRef{
 									Val: "tag_a",
 								},
-								RHS: &influxql.StringLiteral{Val: "b"},
+								RHS: &influxql.StringLiteral{Val: "x"},
 							},
 						},
 					},
@@ -101,7 +157,7 @@ func TestParser_ParseInQuery(t *testing.T) {
 			},
 		},
 		{
-			s: `SELECT a FROM b WHERE tag_a in ('a', 'b') and tag_c = 'c' or tag_d = 'd' and tag_e = 'e'`,
+			s: `SELECT a FROM b WHERE tag_a in ('a', 'b', 'x') and tag_c = 'c' or tag_d = 'd' and tag_e = 'e'`,
 			condition: &influxql.BinaryExpr{
 				Op: influxql.OR,
 				LHS: &influxql.BinaryExpr{
@@ -115,6 +171,7 @@ func TestParser_ParseInQuery(t *testing.T) {
 							Vals: []influxql.Expr{
 								&influxql.StringLiteral{Val: "a"},
 								&influxql.StringLiteral{Val: "b"},
+								&influxql.StringLiteral{Val: "x"},
 							},
 						},
 					},

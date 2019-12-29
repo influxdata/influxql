@@ -1475,6 +1475,42 @@ func (s *SelectStatement) RewriteRegexConditions() {
 	}
 }
 
+// RewriteIn2OrConditions rewrites IN conditions to OR
+// This method assumes all validation has passed.
+func (s *SelectStatement) RewriteIn2OrConditions() {
+	s.Condition = RewriteExpr(s.Condition, func(e Expr) Expr {
+		be, ok := e.(*BinaryExpr)
+		if !ok || be.Op != IN {
+			// This expression is not a binary condition or is not a IN condition
+			return e
+		}
+		ret := &ParenExpr{}
+
+		vals := be.RHS.(*ListValExpr)
+		root := &BinaryExpr{
+			Op:  EQ,
+			LHS: be.LHS,
+			RHS: vals.Vals[0],
+		}
+		if len(vals.Vals) > 1 {
+			for i := 1; i < len(vals.Vals); i++ {
+				root = &BinaryExpr{
+					Op:  OR,
+					LHS: root,
+					RHS: &BinaryExpr{
+						Op:  EQ,
+						LHS: be.LHS,
+						RHS: vals.Vals[i],
+					},
+				}
+			}
+		}
+		ret.Expr = root
+
+		return ret
+	})
+}
+
 // matchExactRegex matches regexes into literals if possible. This will match the
 // pattern /^foo$/ or /^(foo|bar)$/. It considers /^$/ to be a matching regex.
 func matchExactRegex(v string) ([]string, bool) {
