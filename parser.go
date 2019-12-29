@@ -2557,6 +2557,10 @@ func (p *Parser) ParseExpr() (Expr, error) {
 				tok, pos, lit := p.ScanIgnoreWhitespace()
 				return nil, newParseError(tokstr(tok, lit), []string{"regex"}, pos)
 			}
+		} else if op == IN {
+			if rhs, err = p.parseListValExpr(); err != nil {
+				return nil, err
+			}
 		} else {
 			if rhs, err = p.parseUnaryExpr(); err != nil {
 				return nil, err
@@ -2577,6 +2581,42 @@ func (p *Parser) ParseExpr() (Expr, error) {
 			node = r
 		}
 	}
+}
+
+// parseListValExpr parses a list expression after 'IN' keyword
+func (p *Parser) parseListValExpr() (Expr, error) {
+	// Parse required ( token.
+	if tok, pos, lit := p.ScanIgnoreWhitespace(); tok != LPAREN {
+		return nil, newParseError(tokstr(tok, lit), []string{"("}, pos)
+	}
+
+	expr, err := p.parseUnaryExpr()
+	if err != nil {
+		return nil, err
+	}
+	exprs := &ListValExpr{Vals: []Expr{expr}}
+
+	// Parse remaining (optional) expr.
+	for {
+		if tok, _, _ := p.ScanIgnoreWhitespace(); tok != COMMA {
+			p.Unscan()
+			break
+		}
+
+		e, err := p.parseUnaryExpr()
+		if err != nil {
+			return nil, err
+		}
+
+		exprs.Vals = append(exprs.Vals, e)
+	}
+
+	// Parse required ) token.
+	if tok, pos, lit := p.ScanIgnoreWhitespace(); tok != RPAREN {
+		return nil, newParseError(tokstr(tok, lit), []string{")"}, pos)
+	}
+
+	return exprs, nil
 }
 
 // parseUnaryExpr parses an non-binary expression.

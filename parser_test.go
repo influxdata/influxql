@@ -23,6 +23,224 @@ func TestParser_ParseQuery(t *testing.T) {
 	}
 }
 
+func TestParser_ParseInQuery(t *testing.T) {
+	var tests = []struct {
+		s         string
+		condition *influxql.BinaryExpr
+	}{
+		{
+			s: `SELECT a FROM b WHERE tag_a = 'a' and tag_b = 'b'`,
+			condition: &influxql.BinaryExpr{
+				Op: influxql.AND,
+				LHS: &influxql.BinaryExpr{
+					Op: influxql.EQ,
+					LHS: &influxql.VarRef{
+						Val: "tag_a",
+					},
+					RHS: &influxql.StringLiteral{Val: "a"},
+				},
+				RHS: &influxql.BinaryExpr{
+					Op: influxql.EQ,
+					LHS: &influxql.VarRef{
+						Val: "tag_b",
+					},
+					RHS: &influxql.StringLiteral{Val: "b"},
+				},
+			},
+		},
+		{
+			s: `SELECT a FROM b WHERE (tag_a = 'a' or tag_a = 'b') and tag_c = 'c' or tag_d = 'd' and tag_e = 'e'`,
+			condition: &influxql.BinaryExpr{
+				Op: influxql.OR,
+				LHS: &influxql.BinaryExpr{
+					Op: influxql.AND,
+					LHS: &influxql.ParenExpr{
+						Expr: &influxql.BinaryExpr{
+							Op: influxql.OR,
+							LHS: &influxql.BinaryExpr{
+								Op: influxql.EQ,
+								LHS: &influxql.VarRef{
+									Val: "tag_a",
+								},
+								RHS: &influxql.StringLiteral{Val: "a"},
+							},
+							RHS: &influxql.BinaryExpr{
+								Op: influxql.EQ,
+								LHS: &influxql.VarRef{
+									Val: "tag_a",
+								},
+								RHS: &influxql.StringLiteral{Val: "b"},
+							},
+						},
+					},
+					RHS: &influxql.BinaryExpr{
+						Op: influxql.EQ,
+						LHS: &influxql.VarRef{
+							Val: "tag_c",
+						},
+						RHS: &influxql.StringLiteral{Val: "c"},
+					},
+				},
+				RHS: &influxql.BinaryExpr{
+					Op: influxql.AND,
+					LHS: &influxql.BinaryExpr{
+						Op: influxql.EQ,
+						LHS: &influxql.VarRef{
+							Val: "tag_d",
+						},
+						RHS: &influxql.StringLiteral{Val: "d"},
+					},
+					RHS: &influxql.BinaryExpr{
+						Op: influxql.EQ,
+						LHS: &influxql.VarRef{
+							Val: "tag_e",
+						},
+						RHS: &influxql.StringLiteral{Val: "e"},
+					},
+				},
+			},
+		},
+		{
+			s: `SELECT a FROM b WHERE tag_a in ('a', 'b') and tag_c = 'c' or tag_d = 'd' and tag_e = 'e'`,
+			condition: &influxql.BinaryExpr{
+				Op: influxql.OR,
+				LHS: &influxql.BinaryExpr{
+					Op: influxql.AND,
+					LHS: &influxql.BinaryExpr{
+						Op: influxql.IN,
+						LHS: &influxql.VarRef{
+							Val: "tag_a",
+						},
+						RHS: &influxql.ListValExpr{
+							Vals: []influxql.Expr{
+								&influxql.StringLiteral{Val: "a"},
+								&influxql.StringLiteral{Val: "b"},
+							},
+						},
+					},
+					RHS: &influxql.BinaryExpr{
+						Op: influxql.EQ,
+						LHS: &influxql.VarRef{
+							Val: "tag_c",
+						},
+						RHS: &influxql.StringLiteral{Val: "c"},
+					},
+				},
+				RHS: &influxql.BinaryExpr{
+					Op: influxql.AND,
+					LHS: &influxql.BinaryExpr{
+						Op: influxql.EQ,
+						LHS: &influxql.VarRef{
+							Val: "tag_d",
+						},
+						RHS: &influxql.StringLiteral{Val: "d"},
+					},
+					RHS: &influxql.BinaryExpr{
+						Op: influxql.EQ,
+						LHS: &influxql.VarRef{
+							Val: "tag_e",
+						},
+						RHS: &influxql.StringLiteral{Val: "e"},
+					},
+				},
+			},
+		},
+		{
+			s: `SELECT a FROM b WHERE (field_a = 2*3 or field_a = 2+3) and field_b = 'b'`,
+			condition: &influxql.BinaryExpr{
+				Op: influxql.AND,
+				LHS: &influxql.ParenExpr{
+					Expr: &influxql.BinaryExpr{
+						Op: influxql.OR,
+						LHS: &influxql.BinaryExpr{
+							Op: influxql.EQ,
+							LHS: &influxql.VarRef{
+								Val: "field_a",
+							},
+							RHS: &influxql.BinaryExpr{
+								Op:  influxql.MUL,
+								LHS: &influxql.IntegerLiteral{Val: 2},
+								RHS: &influxql.IntegerLiteral{Val: 3},
+							},
+						},
+						RHS: &influxql.BinaryExpr{
+							Op: influxql.EQ,
+							LHS: &influxql.VarRef{
+								Val: "field_a",
+							},
+							RHS: &influxql.BinaryExpr{
+								Op:  influxql.ADD,
+								LHS: &influxql.IntegerLiteral{Val: 2},
+								RHS: &influxql.IntegerLiteral{Val: 3},
+							},
+						},
+					},
+				},
+				RHS: &influxql.BinaryExpr{
+					Op: influxql.EQ,
+					LHS: &influxql.VarRef{
+						Val: "field_b",
+					},
+					RHS: &influxql.StringLiteral{Val: "b"},
+				},
+			},
+		},
+		/* TODO: should support exp
+		{
+			s: `SELECT a FROM b WHERE field_a in (2*3, 2+3) and field_b = 'b'`,
+			condition: &influxql.BinaryExpr{
+				Op: influxql.AND,
+				LHS: &influxql.BinaryExpr{
+					Op: influxql.IN,
+					LHS: &influxql.VarRef{
+						Val: "field_b",
+					},
+					RHS: &influxql.ListValExpr{
+						Vals: []influxql.Expr{
+							&influxql.BinaryExpr{
+								Op:  influxql.MUL,
+								LHS: &influxql.IntegerLiteral{Val: 2},
+								RHS: &influxql.IntegerLiteral{Val: 3},
+							},
+							&influxql.BinaryExpr{
+								Op:  influxql.ADD,
+								LHS: &influxql.IntegerLiteral{Val: 2},
+								RHS: &influxql.IntegerLiteral{Val: 3},
+							},
+						},
+					},
+				},
+				RHS: &influxql.BinaryExpr{
+					Op: influxql.EQ,
+					LHS: &influxql.VarRef{
+						Val: "field_b",
+					},
+					RHS: &influxql.StringLiteral{Val: "b"},
+				},
+			},
+		},
+		*/
+	}
+
+	for _, test := range tests {
+		q, err := influxql.NewParser(strings.NewReader(test.s)).ParseQuery()
+		if err != nil {
+			t.Fatalf("unexpected error: %s", err)
+		}
+		if len(q.Statements) != 1 {
+			t.Fatalf("statments len should eq 1, bug got:%v", len(q.Statements))
+		}
+		cond, ok := q.Statements[0].(*influxql.SelectStatement).Condition.(*influxql.BinaryExpr)
+		if !ok {
+			t.Fatalf("select statement condition type should be *BinaryExpr, bug got:%+v", q.Statements[0].(*influxql.SelectStatement).Condition)
+		}
+		if !reflect.DeepEqual(cond, test.condition) {
+			t.Fatalf("parsed condition not eq expected condition, cond:%+v, test.condition:%+v", *cond, *test.condition)
+		}
+	}
+
+}
+
 func TestParser_ParseQuery_TrailingSemicolon(t *testing.T) {
 	s := `SELECT value FROM cpu;`
 	q, err := influxql.NewParser(strings.NewReader(s)).ParseQuery()
@@ -2750,14 +2968,14 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `CREATE DATABASE testdb`,
 			stmt: &influxql.CreateDatabaseStatement{
-				Name: "testdb",
+				Name:                  "testdb",
 				RetentionPolicyCreate: false,
 			},
 		},
 		{
 			s: `CREATE DATABASE testdb WITH DURATION 24h`,
 			stmt: &influxql.CreateDatabaseStatement{
-				Name: "testdb",
+				Name:                    "testdb",
 				RetentionPolicyCreate:   true,
 				RetentionPolicyDuration: duration(24 * time.Hour),
 			},
@@ -2765,7 +2983,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `CREATE DATABASE testdb WITH SHARD DURATION 30m`,
 			stmt: &influxql.CreateDatabaseStatement{
-				Name: "testdb",
+				Name:                              "testdb",
 				RetentionPolicyCreate:             true,
 				RetentionPolicyShardGroupDuration: 30 * time.Minute,
 			},
@@ -2773,7 +2991,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `CREATE DATABASE testdb WITH REPLICATION 2`,
 			stmt: &influxql.CreateDatabaseStatement{
-				Name: "testdb",
+				Name:                       "testdb",
 				RetentionPolicyCreate:      true,
 				RetentionPolicyReplication: intptr(2),
 			},
@@ -2781,7 +2999,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `CREATE DATABASE testdb WITH NAME test_name`,
 			stmt: &influxql.CreateDatabaseStatement{
-				Name: "testdb",
+				Name:                  "testdb",
 				RetentionPolicyCreate: true,
 				RetentionPolicyName:   "test_name",
 			},
@@ -2789,7 +3007,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `CREATE DATABASE testdb WITH DURATION 24h REPLICATION 2 NAME test_name`,
 			stmt: &influxql.CreateDatabaseStatement{
-				Name: "testdb",
+				Name:                       "testdb",
 				RetentionPolicyCreate:      true,
 				RetentionPolicyDuration:    duration(24 * time.Hour),
 				RetentionPolicyReplication: intptr(2),
@@ -2799,7 +3017,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `CREATE DATABASE testdb WITH DURATION 24h REPLICATION 2 SHARD DURATION 10m NAME test_name `,
 			stmt: &influxql.CreateDatabaseStatement{
-				Name: "testdb",
+				Name:                              "testdb",
 				RetentionPolicyCreate:             true,
 				RetentionPolicyDuration:           duration(24 * time.Hour),
 				RetentionPolicyReplication:        intptr(2),

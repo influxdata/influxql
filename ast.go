@@ -281,6 +281,7 @@ func (*Target) node()          {}
 func (*TimeLiteral) node()     {}
 func (*VarRef) node()          {}
 func (*Wildcard) node()        {}
+func (*ListValExpr) node()     {}
 
 // Query represents a collection of ordered statements.
 type Query struct {
@@ -407,6 +408,7 @@ func (*StringLiteral) expr()   {}
 func (*TimeLiteral) expr()     {}
 func (*VarRef) expr()          {}
 func (*Wildcard) expr()        {}
+func (*ListValExpr) expr()     {}
 
 // Literal represents a static literal.
 type Literal interface {
@@ -3600,6 +3602,23 @@ func (s *ListLiteral) String() string {
 			_, _ = buf.WriteString(", ")
 		}
 		_, _ = buf.WriteString(QuoteIdent(tagKey))
+	}
+	_, _ = buf.WriteString(")")
+	return buf.String()
+}
+
+type ListValExpr struct {
+	Vals []Expr
+}
+
+func (s *ListValExpr) String() string {
+	var buf strings.Builder
+	_, _ = buf.WriteString("(")
+	for idx, val := range s.Vals {
+		if idx != 0 {
+			_, _ = buf.WriteString(", ")
+		}
+		_, _ = buf.WriteString(val.String())
 	}
 	_, _ = buf.WriteString(")")
 	return buf.String()

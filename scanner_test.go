@@ -164,6 +164,8 @@ func TestScanner_Scan(t *testing.T) {
 		{s: `WRITE`, tok: influxql.WRITE},
 		{s: `explain`, tok: influxql.EXPLAIN}, // case insensitive
 		{s: `seLECT`, tok: influxql.SELECT},   // case insensitive
+		{s: `IN`, tok: influxql.IN},
+		{s: `in`, tok: influxql.IN},
 	}
 
 	for i, tt := range tests {
