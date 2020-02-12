@@ -23,7 +23,7 @@ const (
 // Parser represents an InfluxQL parser.
 type Parser struct {
 	s      *bufScanner
-	params map[string]interface{}
+	params map[string]Value
 }
 
 // NewParser returns a new instance of Parser.
@@ -33,7 +33,10 @@ func NewParser(r io.Reader) *Parser {
 
 // SetParams sets the parameters that will be used for any bound parameter substitutions.
 func (p *Parser) SetParams(params map[string]interface{}) {
-	p.params = params
+	p.params = make(map[string]Value, len(params))
+	for name, param := range params {
+		p.params[name] = BindValue(param)
+	}
 }
 
 // ParseQuery parses a query string and returns its AST representation.
@@ -2647,7 +2650,7 @@ func (p *Parser) parseUnaryExpr() (Expr, error) {
 		}
 		return &IntegerLiteral{Val: v}, nil
 	case TRUE, FALSE:
-		return &BooleanLiteral{Val: (tok == TRUE)}, nil
+		return &BooleanLiteral{Val: tok == TRUE}, nil
 	case DURATIONVAL:
 		v, err := ParseDuration(lit)
 		if err != nil {
@@ -2675,28 +2678,24 @@ func (p *Parser) parseUnaryExpr() (Expr, error) {
 		}
 		return &RegexLiteral{Val: re}, nil
 	case BOUNDPARAM:
+		// If we have a BOUNDPARAM in the token stream,
+		// it wasn't resolved by the parser to another
+		// token type which means it is invalid.
+		// Figure out what is wrong with it.
 		k := strings.TrimPrefix(lit, "$")
 		if len(k) == 0 {
 			return nil, errors.New("empty bound parameter")
 		}
 
-		v := p.params[k]
-		if v == nil {
+		v, ok := p.params[k]
+		if !ok {
 			return nil, fmt.Errorf("missing parameter: %s", k)
 		}
 
-		switch v := v.(type) {
-		case float64:
-			return &NumberLiteral{Val: v}, nil
-		case int64:
-			return &IntegerLiteral{Val: v}, nil
-		case string:
-			return &StringLiteral{Val: v}, nil
-		case bool:
-			return &BooleanLiteral{Val: v}, nil
-		default:
-			return nil, fmt.Errorf("unable to bind parameter with type %T", v)
-		}
+		// The value must be an ErrorValue.
+		// Return the value as an error. A non-error value
+		// would have been substituted as something else.
+		return nil, errors.New(v.Value())
 	case ADD, SUB:
 		mul := 1
 		if tok == SUB {
@@ -2759,11 +2758,20 @@ func (p *Parser) parseRegex() (*RegexLiteral, error) {
 
 	// If the next character is not a '/', then return nils.
 	nextRune = p.peekRune()
-	if nextRune != '/' {
+	if nextRune == '$' {
+		// This might be a bound parameter and it might
+		// resolve to a regex.
+		tok, _, _ := p.Scan()
+		p.Unscan()
+		if tok != REGEX {
+			// It was not a regular expression so return.
+			return nil, nil
+		}
+	} else if nextRune != '/' {
 		return nil, nil
 	}
 
-	tok, pos, lit := p.s.ScanRegex()
+	tok, pos, lit := p.ScanRegex()
 
 	if tok == BADESCAPE {
 		msg := fmt.Sprintf("bad escape: %s", lit)
@@ -2886,8 +2894,34 @@ func (p *Parser) parseResample() (time.Duration, time.Duration, error) {
 	return interval, maxDuration, nil
 }
 
-// scan returns the next token from the underlying scanner.
-func (p *Parser) Scan() (tok Token, pos Pos, lit string) { return p.s.Scan() }
+// Scan returns the next token from the underlying scanner.
+func (p *Parser) Scan() (tok Token, pos Pos, lit string) {
+	return p.scan(p.s.Scan)
+}
+
+// ScanRegex returns the next token from the underlying scanner
+// using the regex scanner.
+func (p *Parser) ScanRegex() (tok Token, pos Pos, lit string) {
+	return p.scan(p.s.ScanRegex)
+}
+
+type scanFunc func() (tok Token, pos Pos, lit string)
+
+func (p *Parser) scan(fn scanFunc) (tok Token, pos Pos, lit string) {
+	tok, pos, lit = fn()
+	if tok == BOUNDPARAM {
+		// If we have a bound parameter, attempt to
+		// replace it in the scanner. If the bound parameter
+		// isn't valid, do not perform the replacement.
+		k := strings.TrimPrefix(lit, "$")
+		if len(k) != 0 {
+			if v, ok := p.params[k]; ok {
+				tok, lit = v.TokenType(), v.Value()
+			}
+		}
+	}
+	return tok, pos, lit
+}
 
 // ScanIgnoreWhitespace scans the next non-whitespace and non-comment token.
 func (p *Parser) ScanIgnoreWhitespace() (tok Token, pos Pos, lit string) {
@@ -3021,11 +3055,13 @@ func FormatDuration(d time.Duration) string {
 		return fmt.Sprintf("%ds", d/time.Second)
 	} else if d%time.Millisecond == 0 {
 		return fmt.Sprintf("%dms", d/time.Millisecond)
+	} else if d%time.Microsecond == 0 {
+		// Although we accept both "u" and "µ" when reading microsecond durations,
+		// we output with "u", which can be represented in 1 byte,
+		// instead of "µ", which requires 2 bytes.
+		return fmt.Sprintf("%du", d/time.Microsecond)
 	}
-	// Although we accept both "u" and "µ" when reading microsecond durations,
-	// we output with "u", which can be represented in 1 byte,
-	// instead of "µ", which requires 2 bytes.
-	return fmt.Sprintf("%du", d/time.Microsecond)
+	return fmt.Sprintf("%dns", d)
 }
 
 // parseTokens consumes an expected sequence of tokens.

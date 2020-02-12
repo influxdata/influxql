@@ -1201,6 +1201,274 @@ func TestParser_ParseStatement(t *testing.T) {
 			},
 		},
 
+		// SELECT statement with a field as a bound parameter.
+		{
+			s: `SELECT mean($field) FROM cpu`,
+			params: map[string]interface{}{
+				"field": map[string]interface{}{"identifier": "value"},
+			},
+			stmt: &influxql.SelectStatement{
+				Fields: []*influxql.Field{{
+					Expr: &influxql.Call{
+						Name: "mean",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "value"},
+						}}},
+				},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+			},
+		},
+
+		// SELECT statement with a function as a bound parameter.
+		{
+			s: `SELECT $fn(value) FROM cpu`,
+			params: map[string]interface{}{
+				"fn": map[string]interface{}{"identifier": "mean"},
+			},
+			stmt: &influxql.SelectStatement{
+				Fields: []*influxql.Field{{
+					Expr: &influxql.Call{
+						Name: "mean",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "value"},
+						}}},
+				},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+			},
+		},
+
+		// SELECT statement with a regex as a bound parameter.
+		{
+			s: `SELECT mean(value) FROM cpu WHERE host =~ $host`,
+			params: map[string]interface{}{
+				"host": map[string]interface{}{"regex": "^server.*"},
+			},
+			stmt: &influxql.SelectStatement{
+				Fields: []*influxql.Field{{
+					Expr: &influxql.Call{
+						Name: "mean",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "value"},
+						}}},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op: influxql.EQREGEX,
+					LHS: &influxql.VarRef{
+						Val: "host",
+					},
+					RHS: &influxql.RegexLiteral{
+						Val: regexp.MustCompile(`^server.*`),
+					},
+				},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+			},
+		},
+
+		// SELECT statement with a field and type as a bound parameter.
+		{
+			s: `SELECT $field::$type FROM cpu`,
+			params: map[string]interface{}{
+				"field": map[string]interface{}{"identifier": "value"},
+				"type":  map[string]interface{}{"identifier": "integer"},
+			},
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Fields: []*influxql.Field{{
+					Expr: &influxql.VarRef{
+						Val:  "value",
+						Type: influxql.Integer,
+					}},
+				},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+			},
+		},
+
+		// SELECT statement with a float as a bound parameter.
+		{
+			s: `SELECT value FROM cpu WHERE value > $f`,
+			params: map[string]interface{}{
+				"f": map[string]interface{}{"float": 2.0},
+			},
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Fields: []*influxql.Field{{
+					Expr: &influxql.VarRef{
+						Val: "value",
+					}},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op: influxql.GT,
+					LHS: &influxql.VarRef{
+						Val: "value",
+					},
+					RHS: &influxql.NumberLiteral{
+						Val: 2,
+					},
+				},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+			},
+		},
+
+		// SELECT statement with a float as an integer in a bound parameter.
+		{
+			s: `SELECT value FROM cpu WHERE value > $f`,
+			params: map[string]interface{}{
+				"f": map[string]interface{}{"float": int64(2)},
+			},
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Fields: []*influxql.Field{{
+					Expr: &influxql.VarRef{
+						Val: "value",
+					}},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op: influxql.GT,
+					LHS: &influxql.VarRef{
+						Val: "value",
+					},
+					RHS: &influxql.NumberLiteral{
+						Val: 2,
+					},
+				},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+			},
+		},
+
+		// SELECT statement with an integer in a bound parameter.
+		{
+			s: `SELECT value FROM cpu WHERE value > $i`,
+			params: map[string]interface{}{
+				"i": map[string]interface{}{"integer": int64(2)},
+			},
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Fields: []*influxql.Field{{
+					Expr: &influxql.VarRef{
+						Val: "value",
+					}},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op: influxql.GT,
+					LHS: &influxql.VarRef{
+						Val: "value",
+					},
+					RHS: &influxql.IntegerLiteral{
+						Val: 2,
+					},
+				},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+			},
+		},
+
+		// SELECT statement with group by interval with a bound parameter.
+		{
+			s: `SELECT mean(value) FROM cpu GROUP BY time($interval)`,
+			params: map[string]interface{}{
+				"interval": map[string]interface{}{"duration": "10s"},
+			},
+			stmt: &influxql.SelectStatement{
+				Fields: []*influxql.Field{{
+					Expr: &influxql.Call{
+						Name: "mean",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "value"},
+						},
+					}},
+				},
+				Dimensions: []*influxql.Dimension{{
+					Expr: &influxql.Call{
+						Name: "time",
+						Args: []influxql.Expr{
+							&influxql.DurationLiteral{Val: 10 * time.Second},
+						},
+					},
+				}},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+			},
+		},
+
+		// SELECT statement with group by interval integer with a bound parameter.
+		{
+			s: `SELECT mean(value) FROM cpu GROUP BY time($interval)`,
+			params: map[string]interface{}{
+				"interval": map[string]interface{}{"duration": int64(10 * time.Second)},
+			},
+			stmt: &influxql.SelectStatement{
+				Fields: []*influxql.Field{{
+					Expr: &influxql.Call{
+						Name: "mean",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "value"},
+						},
+					}},
+				},
+				Dimensions: []*influxql.Dimension{{
+					Expr: &influxql.Call{
+						Name: "time",
+						Args: []influxql.Expr{
+							&influxql.DurationLiteral{Val: 10 * time.Second},
+						},
+					},
+				}},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+			},
+		},
+
+		// SELECT statement with group by interval integer with a bound parameter and nanosecond precision.
+		{
+			s: `SELECT mean(value) FROM cpu GROUP BY time($interval)`,
+			params: map[string]interface{}{
+				"interval": map[string]interface{}{"duration": int64(10)},
+			},
+			stmt: &influxql.SelectStatement{
+				Fields: []*influxql.Field{{
+					Expr: &influxql.Call{
+						Name: "mean",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "value"},
+						},
+					}},
+				},
+				Dimensions: []*influxql.Dimension{{
+					Expr: &influxql.Call{
+						Name: "time",
+						Args: []influxql.Expr{
+							&influxql.DurationLiteral{Val: 10},
+						},
+					},
+				}},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+			},
+		},
+
+		// SELECT statement with group by interval json number with a bound parameter and nanosecond precision.
+		{
+			s: `SELECT mean(value) FROM cpu GROUP BY time($interval)`,
+			params: map[string]interface{}{
+				"interval": map[string]interface{}{"duration": json.Number("10")},
+			},
+			stmt: &influxql.SelectStatement{
+				Fields: []*influxql.Field{{
+					Expr: &influxql.Call{
+						Name: "mean",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "value"},
+						},
+					}},
+				},
+				Dimensions: []*influxql.Dimension{{
+					Expr: &influxql.Call{
+						Name: "time",
+						Args: []influxql.Expr{
+							&influxql.DurationLiteral{Val: 10},
+						},
+					},
+				}},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+			},
+		},
+
 		// SELECT statement with a subquery
 		{
 			s: `SELECT sum(derivative) FROM (SELECT derivative(value) FROM cpu GROUP BY host) WHERE time >= now() - 1d GROUP BY time(1h)`,
@@ -2750,14 +3018,14 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `CREATE DATABASE testdb`,
 			stmt: &influxql.CreateDatabaseStatement{
-				Name: "testdb",
+				Name:                  "testdb",
 				RetentionPolicyCreate: false,
 			},
 		},
 		{
 			s: `CREATE DATABASE testdb WITH DURATION 24h`,
 			stmt: &influxql.CreateDatabaseStatement{
-				Name: "testdb",
+				Name:                    "testdb",
 				RetentionPolicyCreate:   true,
 				RetentionPolicyDuration: duration(24 * time.Hour),
 			},
@@ -2765,7 +3033,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `CREATE DATABASE testdb WITH SHARD DURATION 30m`,
 			stmt: &influxql.CreateDatabaseStatement{
-				Name: "testdb",
+				Name:                              "testdb",
 				RetentionPolicyCreate:             true,
 				RetentionPolicyShardGroupDuration: 30 * time.Minute,
 			},
@@ -2773,7 +3041,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `CREATE DATABASE testdb WITH REPLICATION 2`,
 			stmt: &influxql.CreateDatabaseStatement{
-				Name: "testdb",
+				Name:                       "testdb",
 				RetentionPolicyCreate:      true,
 				RetentionPolicyReplication: intptr(2),
 			},
@@ -2781,7 +3049,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `CREATE DATABASE testdb WITH NAME test_name`,
 			stmt: &influxql.CreateDatabaseStatement{
-				Name: "testdb",
+				Name:                  "testdb",
 				RetentionPolicyCreate: true,
 				RetentionPolicyName:   "test_name",
 			},
@@ -2789,7 +3057,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `CREATE DATABASE testdb WITH DURATION 24h REPLICATION 2 NAME test_name`,
 			stmt: &influxql.CreateDatabaseStatement{
-				Name: "testdb",
+				Name:                       "testdb",
 				RetentionPolicyCreate:      true,
 				RetentionPolicyDuration:    duration(24 * time.Hour),
 				RetentionPolicyReplication: intptr(2),
@@ -2799,7 +3067,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `CREATE DATABASE testdb WITH DURATION 24h REPLICATION 2 SHARD DURATION 10m NAME test_name `,
 			stmt: &influxql.CreateDatabaseStatement{
-				Name: "testdb",
+				Name:                              "testdb",
 				RetentionPolicyCreate:             true,
 				RetentionPolicyDuration:           duration(24 * time.Hour),
 				RetentionPolicyReplication:        intptr(2),
@@ -3361,6 +3629,70 @@ func TestParser_ParseStatement(t *testing.T) {
 		{s: `SET PASSWORD FOR dejan = bla`, err: `found bla, expected string at line 1, char 26`},
 		{s: `$SHOW$DATABASES`, err: `found $SHOW, expected SELECT, DELETE, SHOW, CREATE, DROP, EXPLAIN, GRANT, REVOKE, ALTER, SET, KILL at line 1, char 1`},
 		{s: `SELECT * FROM cpu WHERE "tagkey" = $$`, err: `empty bound parameter`},
+
+		// Create a database with a bound parameter.
+		{
+			s: `CREATE DATABASE $db`,
+			params: map[string]interface{}{
+				"db": map[string]interface{}{"identifier": "mydb"},
+			},
+			stmt: &influxql.CreateDatabaseStatement{
+				Name: "mydb",
+			},
+		},
+
+		// Count records in a measurement.
+		{
+			s: `SELECT count($value) FROM $m`,
+			params: map[string]interface{}{
+				"value": map[string]interface{}{"identifier": "my_value"},
+				"m":     map[string]interface{}{"identifier": "my_measurement"},
+			},
+			stmt: &influxql.SelectStatement{
+				Fields: []*influxql.Field{{
+					Expr: &influxql.Call{
+						Name: "count",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "my_value"},
+						}}},
+				},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "my_measurement"}},
+			},
+		},
+
+		// Find the last 10 shapes records.
+		{
+			s: `SELECT * FROM $m LIMIT $limit`,
+			params: map[string]interface{}{
+				"m":     map[string]interface{}{"identifier": "shapes"},
+				"limit": int64(10),
+			},
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Fields: []*influxql.Field{{
+					Expr: &influxql.Wildcard{},
+				}},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "shapes"}},
+				Limit:   10,
+			},
+		},
+
+		// Find the last 10 shapes records (advanced syntax).
+		{
+			s: `SELECT * FROM $m LIMIT $limit`,
+			params: map[string]interface{}{
+				"m":     map[string]interface{}{"identifier": "shapes"},
+				"limit": map[string]interface{}{"integer": json.Number("10")},
+			},
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Fields: []*influxql.Field{{
+					Expr: &influxql.Wildcard{},
+				}},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "shapes"}},
+				Limit:   10,
+			},
+		},
 	}
 
 	for i, tt := range tests {
