@@ -2,6 +2,7 @@ package influxql
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -3770,42 +3771,78 @@ func (e *Wildcard) String() string {
 
 // CloneExpr returns a deep copy of the expression.
 func CloneExpr(expr Expr) Expr {
+	// Call CloneExprWithConstraints but with basically no constraints -- a
+	// background context which will carry no cancellation information and 0
+	// maximum depth which means infinite recursion.
+	return func() Expr { e, _ := CloneExprWithContext(context.Background(), 0, expr); return e }()
+}
+
+func CloneExprWithContext(ctx context.Context, maxDepth int, expr Expr) (Expr, error) {
+	return cloneExprWithContext(ctx, 0, maxDepth, expr)
+}
+
+func cloneExprWithContext(ctx context.Context, depth int, maxDepth int, expr Expr) (Expr, error) {
 	if expr == nil {
-		return nil
+		return nil, nil
 	}
+
+	if maxDepth > 0 && depth >= maxDepth {
+		return nil, fmt.Errorf("max recursion depth of %d exceeded while cloning expression %q", maxDepth, expr)
+	}
+
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	switch expr := expr.(type) {
 	case *BinaryExpr:
-		return &BinaryExpr{Op: expr.Op, LHS: CloneExpr(expr.LHS), RHS: CloneExpr(expr.RHS)}
+		lhs, err := cloneExprWithContext(ctx, depth+1, maxDepth, expr.LHS)
+		if err != nil {
+			return nil, err
+		}
+		rhs, err := cloneExprWithContext(ctx, depth+1, maxDepth, expr.RHS)
+		if err != nil {
+			return nil, err
+		}
+		return &BinaryExpr{Op: expr.Op, LHS: lhs, RHS: rhs}, nil
 	case *BooleanLiteral:
-		return &BooleanLiteral{Val: expr.Val}
+		return &BooleanLiteral{Val: expr.Val}, nil
 	case *Call:
 		args := make([]Expr, len(expr.Args))
 		for i, arg := range expr.Args {
-			args[i] = CloneExpr(arg)
+			e, err := cloneExprWithContext(ctx, depth+1, maxDepth, arg)
+			if err != nil {
+				return nil, err
+			}
+			args[i] = e
 		}
-		return &Call{Name: expr.Name, Args: args}
+		return &Call{Name: expr.Name, Args: args}, nil
 	case *Distinct:
-		return &Distinct{Val: expr.Val}
+		return &Distinct{Val: expr.Val}, nil
 	case *DurationLiteral:
-		return &DurationLiteral{Val: expr.Val}
+		return &DurationLiteral{Val: expr.Val}, nil
 	case *IntegerLiteral:
-		return &IntegerLiteral{Val: expr.Val}
+		return &IntegerLiteral{Val: expr.Val}, nil
 	case *UnsignedLiteral:
-		return &UnsignedLiteral{Val: expr.Val}
+		return &UnsignedLiteral{Val: expr.Val}, nil
 	case *NumberLiteral:
-		return &NumberLiteral{Val: expr.Val}
+		return &NumberLiteral{Val: expr.Val}, nil
 	case *ParenExpr:
-		return &ParenExpr{Expr: CloneExpr(expr.Expr)}
+		e, err := cloneExprWithContext(ctx, depth+1, maxDepth, expr.Expr)
+		if err != nil {
+			return nil, err
+		}
+		return &ParenExpr{Expr: e}, nil
 	case *RegexLiteral:
-		return &RegexLiteral{Val: expr.Val}
+		return &RegexLiteral{Val: expr.Val}, nil
 	case *StringLiteral:
-		return &StringLiteral{Val: expr.Val}
+		return &StringLiteral{Val: expr.Val}, nil
 	case *TimeLiteral:
-		return &TimeLiteral{Val: expr.Val}
+		return &TimeLiteral{Val: expr.Val}, nil
 	case *VarRef:
-		return &VarRef{Val: expr.Val, Type: expr.Type}
+		return &VarRef{Val: expr.Val, Type: expr.Type}, nil
 	case *Wildcard:
-		return &Wildcard{Type: expr.Type}
+		return &Wildcard{Type: expr.Type}, nil
 	}
 	panic("unreachable")
 }
