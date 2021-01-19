@@ -1320,7 +1320,7 @@ func (s *SelectStatement) RewriteFields(m FieldMapper) (*SelectStatement, error)
 
 				// Add additional types for certain functions.
 				switch call.Name {
-				case "count", "first", "last", "distinct", "elapsed", "mode", "sample":
+				case "count", "first", "last", "distinct", "elapsed", "mode", "sample", "count_distinct_approx":
 					supportedTypes[String] = struct{}{}
 					fallthrough
 				case "min", "max":

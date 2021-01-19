@@ -193,6 +193,40 @@ func TestParser_ParseStatement(t *testing.T) {
 			},
 		},
 
+
+		// count_distinct_approx
+		{
+			s: fmt.Sprintf(`SELECT count_distinct_approx(_seriesKey) FROM myseries WHERE time > '%s' GROUP BY time(1h);`, now.UTC().Format(time.RFC3339Nano)),
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: false,
+				Fields: []*influxql.Field{
+					{Expr: &influxql.Call{
+						Name: "count_distinct_approx",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "_seriesKey"},
+						},
+					}},
+				},
+				Dimensions: []*influxql.Dimension{
+					{
+						Expr: &influxql.Call{
+							Name: "time",
+							Args: []influxql.Expr{
+								&influxql.DurationLiteral{Val: 1 * time.Hour},
+							},
+						},
+					},
+				},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+				Condition: &influxql.BinaryExpr{
+					Op:  influxql.GT,
+					LHS: &influxql.VarRef{Val: "time"},
+					RHS: &influxql.StringLiteral{Val: now.UTC().Format(time.RFC3339Nano)},
+				},
+			},
+		},
+
+
 		// sample
 		{
 			s: `SELECT sample(field1, 100) FROM myseries;`,
