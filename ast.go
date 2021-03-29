@@ -2989,15 +2989,26 @@ type ShowTagValuesStatement struct {
 	Sources Sources
 
 	// Operation to use when selecting tag key(s).
+	// This is one of: (associated TagKeyExpr Literal
+	// type in parentheses:
+	// 	EQ (*StringLiteral)
+	//	NEQ (*StringLiteral)
+	//	IN (*ListLiteral)
+	//	EQREGEX (*RegexLiteral)
+	//	NEQREGEX (*RegexLiteral)
 	Op Token
 
 	// Literal to compare the tag key(s) with.
+	// The value of the above Op field determines its dynamic type.
 	TagKeyExpr Literal
 
-	// An expression evaluated on data point.
+	// An expression evaluated on each data point.
 	Condition Expr
 
-	// Fields to sort results by.
+	// NOTE: The specfication doesn't permit ORDER BY in
+	// a SHOW TAG VALUES statement and this field is
+	// ignored in practice. It's only left here to maintain
+	// backward compatibility.
 	SortFields SortFields
 
 	// Maximum number of rows to be returned.
