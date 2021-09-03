@@ -2575,6 +2575,12 @@ type ShowMeasurementsStatement struct {
 	// Database to query. If blank, use the default database.
 	Database string
 
+	// Retention policy to query. If blank, use all retention policies (do not use default)
+	RetentionPolicy string
+
+	WildcardDatabase bool
+	WildcardRetentionPolicy bool
+
 	// Measurement name or regex.
 	Source Source
 
@@ -2597,9 +2603,19 @@ func (s *ShowMeasurementsStatement) String() string {
 	var buf strings.Builder
 	_, _ = buf.WriteString("SHOW MEASUREMENTS")
 
-	if s.Database != "" {
+	if s.Database != "" || s.WildcardDatabase {
 		_, _ = buf.WriteString(" ON ")
-		_, _ = buf.WriteString(s.Database)
+		if s.WildcardDatabase {
+			_, _ = buf.WriteString("*")
+		} else {
+			_, _ = buf.WriteString(s.Database)
+		}
+		if s.WildcardRetentionPolicy {
+			_, _ = buf.WriteString(".*")
+		} else if s.RetentionPolicy != "" {
+			_, _ = buf.WriteString(".")
+			_, _ = buf.WriteString(s.RetentionPolicy)
+		}
 	}
 	if s.Source != nil {
 		_, _ = buf.WriteString(" WITH MEASUREMENT ")

@@ -1953,6 +1953,50 @@ func TestParser_ParseStatement(t *testing.T) {
 			},
 		},
 
+		// SHOW MEASUREMENTS ON db0.rp0
+		{
+			s: `SHOW MEASUREMENTS ON db0.rp0`,
+			stmt: &influxql.ShowMeasurementsStatement{
+				Database: "db0",
+				RetentionPolicy: "rp0",
+			},
+		},
+
+		// SHOW MEASUREMENTS ON *
+		{
+			s: `SHOW MEASUREMENTS ON *`,
+			stmt: &influxql.ShowMeasurementsStatement{
+				WildcardDatabase: true,
+			},
+		},
+
+		// SHOW MEASUREMENTS ON *.*
+		{
+			s: `SHOW MEASUREMENTS ON *.*`,
+			stmt: &influxql.ShowMeasurementsStatement{
+				WildcardDatabase: true,
+				WildcardRetentionPolicy: true,
+			},
+		},
+
+		// SHOW MEASUREMENTS ON db0.*
+		{
+			s: `SHOW MEASUREMENTS ON db0.*`,
+			stmt: &influxql.ShowMeasurementsStatement{
+				Database: "db0",
+				WildcardRetentionPolicy: true,
+			},
+		},
+
+		// SHOW MEASUREMENTS ON *.rp0
+		{
+			s: `SHOW MEASUREMENTS ON *.rp0`,
+			stmt: &influxql.ShowMeasurementsStatement{
+				RetentionPolicy: "rp0",
+				WildcardDatabase: true,
+			},
+		},
+
 		// SHOW MEASUREMENTS WITH MEASUREMENT = cpu
 		{
 			s: `SHOW MEASUREMENTS WITH MEASUREMENT = cpu`,
