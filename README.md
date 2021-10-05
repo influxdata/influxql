@@ -1168,3 +1168,4 @@ There are also certain aggregates that require ordered input like
 ordered input. It is also important to realize that selectors that are
 grouped by time are the equivalent of an aggregator. It is only
 selectors without a group by time that are different.
+
