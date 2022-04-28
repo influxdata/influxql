@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	internal "github.com/influxdata/influxql/internal"
+	"google.golang.org/protobuf/proto"
 )
 
 // DataType represents the primitive data types available in InfluxQL.
@@ -2578,7 +2578,7 @@ type ShowMeasurementsStatement struct {
 	// Retention policy to query. If blank, use all retention policies (do not use default)
 	RetentionPolicy string
 
-	WildcardDatabase bool
+	WildcardDatabase        bool
 	WildcardRetentionPolicy bool
 
 	// Measurement name or regex.

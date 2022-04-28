@@ -1,5 +1,6 @@
 syntax = "proto2";
 package influxql;
+option go_package = ".;influxql";
 
 message Measurements {
     repeated Measurement Items = 1;
