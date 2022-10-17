@@ -603,7 +603,7 @@ func (s *CreateDatabaseStatement) String() string {
 		_, _ = buf.WriteString(" WITH")
 		if s.RetentionPolicyDuration != nil {
 			_, _ = buf.WriteString(" DURATION ")
-			_, _ = buf.WriteString(s.RetentionPolicyDuration.String())
+			_, _ = buf.WriteString(FormatDuration(*s.RetentionPolicyDuration))
 		}
 		if s.RetentionPolicyReplication != nil {
 			_, _ = buf.WriteString(" REPLICATION ")
@@ -611,7 +611,7 @@ func (s *CreateDatabaseStatement) String() string {
 		}
 		if s.RetentionPolicyShardGroupDuration > 0 {
 			_, _ = buf.WriteString(" SHARD DURATION ")
-			_, _ = buf.WriteString(s.RetentionPolicyShardGroupDuration.String())
+			_, _ = buf.WriteString(FormatDuration(s.RetentionPolicyShardGroupDuration))
 		}
 		if s.RetentionPolicyName != "" {
 			_, _ = buf.WriteString(" NAME ")
@@ -1405,8 +1405,8 @@ func (s *SelectStatement) RewriteFields(m FieldMapper) (*SelectStatement, error)
 //
 // Conditions that can currently be simplified are:
 //
-//     - host =~ /^foo$/ becomes host = 'foo'
-//     - host !~ /^foo$/ becomes host != 'foo'
+//   - host =~ /^foo$/ becomes host = 'foo'
+//   - host !~ /^foo$/ becomes host != 'foo'
 //
 // Note: if the regex contains groups, character classes, repetition or
 // similar, it's likely it won't be rewritten. In order to support rewriting
