@@ -1069,7 +1069,7 @@ func (p *Parser) parseShowMeasurementsStatement() (*ShowMeasurementsStatement, e
 			stmt.Database = lit
 		} else if tok == MUL {
 			stmt.WildcardDatabase = true
-		} else{
+		} else {
 			return nil, newParseError(tokstr(tok, lit), []string{"identifier or *"}, pos)
 		}
 
@@ -1079,7 +1079,7 @@ func (p *Parser) parseShowMeasurementsStatement() (*ShowMeasurementsStatement, e
 				stmt.RetentionPolicy = lit
 			} else if tok == MUL {
 				stmt.WildcardRetentionPolicy = true
-			} else{
+			} else {
 				return nil, newParseError(tokstr(tok, lit), []string{"identifier or *"}, pos)
 			}
 		} else {
@@ -2995,8 +2995,8 @@ func ParseDuration(s string) (time.Duration, error) {
 		i++
 	}
 
-	var measure int64
 	var unit string
+	var unitDuration time.Duration
 
 	// Parsing loop.
 	for i < len(a) {
@@ -3016,7 +3016,6 @@ func ParseDuration(s string) (time.Duration, error) {
 		if err != nil {
 			return 0, ErrInvalidDuration
 		}
-		measure = n
 
 		// Extract the unit of measure.
 		// If the last two characters are "ms" then parse as milliseconds.
@@ -3026,40 +3025,41 @@ func ParseDuration(s string) (time.Duration, error) {
 		case 'n':
 			if i+1 < len(a) && a[i+1] == 's' {
 				unit = string(a[i : i+2])
-				d += time.Duration(n)
-				i += 2
-				continue
+				unitDuration = time.Nanosecond
+				break
 			}
 			return 0, ErrInvalidDuration
 		case 'u', 'µ':
-			d += time.Duration(n) * time.Microsecond
+			unitDuration = time.Microsecond
 		case 'm':
 			if i+1 < len(a) && a[i+1] == 's' {
 				unit = string(a[i : i+2])
-				d += time.Duration(n) * time.Millisecond
-				i += 2
-				continue
+				unitDuration = time.Millisecond
+				break
 			}
-			d += time.Duration(n) * time.Minute
+			unitDuration = time.Minute
 		case 's':
-			d += time.Duration(n) * time.Second
+			unitDuration = time.Second
 		case 'h':
-			d += time.Duration(n) * time.Hour
+			unitDuration = time.Hour
 		case 'd':
-			d += time.Duration(n) * 24 * time.Hour
+			unitDuration = 24 * time.Hour
 		case 'w':
-			d += time.Duration(n) * 7 * 24 * time.Hour
+			unitDuration = 7 * 24 * time.Hour
 		default:
 			return 0, ErrInvalidDuration
 		}
-		i++
+		// Check to see if we overflowed a duration
+		if n > (1<<63-1)/unitDuration.Nanoseconds() {
+			return 0, fmt.Errorf("overflowed duration %s: choose a smaller duration or INF", s)
+		}
+		d += time.Duration(n) * unitDuration
+		// Check to see if we overflowed a duration
+		if d < 0 {
+			return 0, fmt.Errorf("overflowed duration %s: choose a smaller duration or INF", s)
+		}
+		i += len(unit)
 	}
-
-	// Check to see if we overflowed a duration
-	if d < 0 && !isNegative {
-		return 0, fmt.Errorf("overflowed duration %d%s: choose a smaller duration or INF", measure, unit)
-	}
-
 	if isNegative {
 		d = -d
 	}

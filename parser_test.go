@@ -1957,7 +1957,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `SHOW MEASUREMENTS ON db0.rp0`,
 			stmt: &influxql.ShowMeasurementsStatement{
-				Database: "db0",
+				Database:        "db0",
 				RetentionPolicy: "rp0",
 			},
 		},
@@ -1974,7 +1974,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `SHOW MEASUREMENTS ON *.*`,
 			stmt: &influxql.ShowMeasurementsStatement{
-				WildcardDatabase: true,
+				WildcardDatabase:        true,
 				WildcardRetentionPolicy: true,
 			},
 		},
@@ -1983,7 +1983,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `SHOW MEASUREMENTS ON db0.*`,
 			stmt: &influxql.ShowMeasurementsStatement{
-				Database: "db0",
+				Database:                "db0",
 				WildcardRetentionPolicy: true,
 			},
 		},
@@ -1992,7 +1992,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `SHOW MEASUREMENTS ON *.rp0`,
 			stmt: &influxql.ShowMeasurementsStatement{
-				RetentionPolicy: "rp0",
+				RetentionPolicy:  "rp0",
 				WildcardDatabase: true,
 			},
 		},
@@ -4171,6 +4171,10 @@ func TestParseDuration(t *testing.T) {
 		{s: `1.2w`, err: "invalid duration"},
 		{s: `10x`, err: "invalid duration"},
 		{s: `10n`, err: "invalid duration"},
+
+		{s: `99999999999h`, err: overflowErrString(`99999999999h`)},
+		{s: `2562047h50m`, err: overflowErrString(`2562047h50m`)},
+		{s: `-2562047h47m50s`, err: overflowErrString(`-2562047h47m50s`)},
 	}
 
 	for i, tt := range tests {
@@ -4181,6 +4185,10 @@ func TestParseDuration(t *testing.T) {
 			t.Errorf("%d. %q\n\nduration mismatch:\n\nexp=%#v\n\ngot=%#v\n\n", i, tt.s, tt.d, d)
 		}
 	}
+}
+
+func overflowErrString(s string) string {
+	return fmt.Sprintf("overflowed duration %s: choose a smaller duration or INF", s)
 }
 
 // Ensure a time duration can be formatted.
