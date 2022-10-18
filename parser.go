@@ -1069,7 +1069,7 @@ func (p *Parser) parseShowMeasurementsStatement() (*ShowMeasurementsStatement, e
 			stmt.Database = lit
 		} else if tok == MUL {
 			stmt.WildcardDatabase = true
-		} else{
+		} else {
 			return nil, newParseError(tokstr(tok, lit), []string{"identifier or *"}, pos)
 		}
 
@@ -1079,7 +1079,7 @@ func (p *Parser) parseShowMeasurementsStatement() (*ShowMeasurementsStatement, e
 				stmt.RetentionPolicy = lit
 			} else if tok == MUL {
 				stmt.WildcardRetentionPolicy = true
-			} else{
+			} else {
 				return nil, newParseError(tokstr(tok, lit), []string{"identifier or *"}, pos)
 			}
 		} else {
