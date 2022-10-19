@@ -1957,7 +1957,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `SHOW MEASUREMENTS ON db0.rp0`,
 			stmt: &influxql.ShowMeasurementsStatement{
-				Database: "db0",
+				Database:        "db0",
 				RetentionPolicy: "rp0",
 			},
 		},
@@ -1974,7 +1974,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `SHOW MEASUREMENTS ON *.*`,
 			stmt: &influxql.ShowMeasurementsStatement{
-				WildcardDatabase: true,
+				WildcardDatabase:        true,
 				WildcardRetentionPolicy: true,
 			},
 		},
@@ -1983,7 +1983,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `SHOW MEASUREMENTS ON db0.*`,
 			stmt: &influxql.ShowMeasurementsStatement{
-				Database: "db0",
+				Database:                "db0",
 				WildcardRetentionPolicy: true,
 			},
 		},
@@ -1992,7 +1992,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `SHOW MEASUREMENTS ON *.rp0`,
 			stmt: &influxql.ShowMeasurementsStatement{
-				RetentionPolicy: "rp0",
+				RetentionPolicy:  "rp0",
 				WildcardDatabase: true,
 			},
 		},
