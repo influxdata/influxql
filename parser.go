@@ -1961,6 +1961,12 @@ func (p *Parser) parseExplainStatement() (*ExplainStatement, error) {
 		p.Unscan()
 	}
 
+	if tok, _, _ := p.ScanIgnoreWhitespace(); tok == VERBOSE {
+		stmt.Verbose = true
+	} else {
+		p.Unscan()
+	}
+
 	if tok, pos, lit := p.ScanIgnoreWhitespace(); tok != SELECT {
 		return nil, newParseError(tokstr(tok, lit), []string{"SELECT"}, pos)
 	}

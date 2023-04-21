@@ -1744,6 +1744,21 @@ func TestParser_ParseStatement(t *testing.T) {
 			},
 		},
 
+		// EXPLAIN VERBOSE ...
+		{
+			s: `EXPLAIN VERBOSE SELECT * FROM cpu`,
+			stmt: &influxql.ExplainStatement{
+				Statement: &influxql.SelectStatement{
+					IsRawQuery: true,
+					Fields: []*influxql.Field{
+						{Expr: &influxql.Wildcard{}},
+					},
+					Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+				},
+				Verbose: true,
+			},
+		},
+
 		// EXPLAIN ANALYZE ...
 		{
 			s: `EXPLAIN ANALYZE SELECT * FROM cpu`,
@@ -1755,6 +1770,21 @@ func TestParser_ParseStatement(t *testing.T) {
 					},
 					Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
 				},
+				Analyze: true,
+			},
+		},
+		// EXPLAIN ANALYZE VERBOSE ...
+		{
+			s: `EXPLAIN ANALYZE VERBOSE SELECT * FROM cpu`,
+			stmt: &influxql.ExplainStatement{
+				Statement: &influxql.SelectStatement{
+					IsRawQuery: true,
+					Fields: []*influxql.Field{
+						{Expr: &influxql.Wildcard{}},
+					},
+					Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+				},
+				Verbose: true,
 				Analyze: true,
 			},
 		},
