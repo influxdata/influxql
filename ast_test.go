@@ -1279,7 +1279,7 @@ func Benchmark_NumberLiteral_String(b *testing.B) {
 		NegInf     int
 	}{}
 	nl := make([]influxql.NumberLiteral, b.N, b.N)
-	for i, _ := range nl {
+	for i := range nl {
 		var n float64
 		sel := rand.ExpFloat64() * 10
 		switch {
@@ -1306,8 +1306,8 @@ func Benchmark_NumberLiteral_String(b *testing.B) {
 	fmt.Printf("tc: %+v\n", tc)
 	b.ResetTimer()
 
-	for i, _ := range nl {
-		nl[i].String()
+	for i := range nl {
+		_ = nl[i].String()
 	}
 }
 
