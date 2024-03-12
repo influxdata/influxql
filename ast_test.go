@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/importer"
 	"math"
+	"math/rand"
 	"reflect"
 	"strings"
 	"testing"
@@ -1266,6 +1267,50 @@ func TestEvalType(t *testing.T) {
 	}
 }
 
+func Benchmark_NumberLiteral_String(b *testing.B) {
+	// Generate test numbers using an exponential distribution.
+	// The numbers are heavily weighted towards fractional numbers, followed by a whole numbers.
+	// Nan, +Inf, and -Inf round out the test data at much lower percentages.
+	tc := struct {
+		Fractional int
+		Whole      int
+		NaN        int
+		PosInf     int
+		NegInf     int
+	}{}
+	nl := make([]influxql.NumberLiteral, b.N, b.N)
+	for i := range nl {
+		var n float64
+		sel := rand.ExpFloat64() * 10
+		switch {
+		case sel >= 12.5 || sel <= 5.0:
+			n = rand.Float64()
+			tc.Fractional++
+		case sel > 12.0:
+			n = math.Inf(-1)
+			tc.NegInf++
+		case sel > 11.5:
+			n = math.Inf(1)
+			tc.PosInf++
+		case sel > 11.0:
+			n = math.NaN()
+			tc.NaN++
+		case sel > 5.0:
+			n = float64(rand.Int31())
+			tc.Whole++
+		default:
+			panic("Shouldn't get here")
+		}
+		nl[i] = influxql.NumberLiteral{Val: n}
+	}
+	fmt.Printf("tc: %+v\n", tc)
+	b.ResetTimer()
+
+	for i := range nl {
+		_ = nl[i].String()
+	}
+}
+
 // Ensure an expression can be reduced.
 func TestReduce(t *testing.T) {
 	now := mustParseTime("2000-01-01T00:00:00Z")
@@ -1277,20 +1322,61 @@ func TestReduce(t *testing.T) {
 	}{
 		// Number literals.
 		{in: `1 + 2`, out: `3`},
-		{in: `(foo*2) + ( (4/2) + (3 * 5) - 0.5 )`, out: `(foo * 2) + 16.500`},
+		{in: `(foo*2) + ( (4/2) + (3 * 5) - 0.5 )`, out: `(foo * 2) + 16.5`},
 		{in: `foo(bar(2 + 3), 4)`, out: `foo(bar(5), 4)`},
-		{in: `4 / 0`, out: `0.000`},
-		{in: `1 / 2`, out: `0.500`},
+		{in: `4 / 0`, out: `0.0`}, // This is fine. (Fixing probably breaks a lot of queries.)
+		{in: `0.0`, out: `0.0`},   // Make sure we don't go from float to int here.
+
+		// Fraction fever, for checking expected use of Ryu conversion used when FormatFloat is passed prec=-1.
+		{in: `10 / 2`, out: `5.0`},                               // whole number
+		{in: `1 / 2`, out: `0.5`},                                // 1 decimal place
+		{in: `1 / 3`, out: `0.3333333333333333`},                 // Repeating fraction
+		{in: `1 / 4`, out: `0.25`},                               // 2 decimal places
+		{in: `1 / 6`, out: `0.16666666666666666`},                // Fancier repeating decimal
+		{in: `1 / 7`, out: `0.14285714285714285`},                // A more exciting repeating decimal
+		{in: `1 / 8`, out: `0.125`},                              // 3 decimal places
+		{in: `1 / 16`, out: `0.0625`},                            // 4 decimal places
+		{in: `1 / 32`, out: `0.03125`},                           // 5 decimal places
+		{in: `1 / 8388608`, out: `0.00000011920928955078125`},    // 23 decimal places, non-repeating decimal, full accuracy
+		{in: `1 / 16777216`, out: `0.00000005960464477539063`},   // 23 decimal places, just past the limit of full accuracy with float64
+		{in: `1 / 134217728`, out: `0.000000007450580596923828`}, // 23 decimal places, way past the limit of full accuracy with float64
+
+		// Fraction fever has been decimalized. This explicitly checks that conversions are reversible.
+		{in: `5.0`, out: `5.0`},                                               // whole number
+		{in: `0.5`, out: `0.5`},                                               // 1 decimal place
+		{in: `0.3333333333333333`, out: `0.3333333333333333`},                 // Repeating fraction
+		{in: `0.25`, out: `0.25`},                                             // 2 decimal places
+		{in: `0.16666666666666666`, out: `0.16666666666666666`},               // Fancier repeating decimal
+		{in: `0.14285714285714285`, out: `0.14285714285714285`},               // A more exciting repeating decimal
+		{in: `0.125`, out: `0.125`},                                           // 3 decimal places
+		{in: `0.0625`, out: `0.0625`},                                         // 4 decimal places
+		{in: `0.03125`, out: `0.03125`},                                       // 5 decimal places
+		{in: `0.00000011920928955078125`, out: `0.00000011920928955078125`},   // 23 decimal places, non-repeating decimal, full accuracy
+		{in: `0.00000005960464477539063`, out: `0.00000005960464477539063`},   // 23 decimal places, just past the limit of full accuracy with float64
+		{in: `0.000000007450580596923828`, out: `0.000000007450580596923828`}, // 23 decimal places, way past the limit of full accuracy with float64
+
+		// math.MaxFloat64
+		{in: `179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.0`, out: `179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.0`},
+
 		{in: `2 % 3`, out: `2`},
 		{in: `5 % 2`, out: `1`},
 		{in: `2 % 0`, out: `0`},
-		{in: `2.5 % 0`, out: `NaN`},
+
+		// There are 3 cases where converting a float to a string gets something besides a number: `NaN`, `+Inf`, and `-Inf`.
+		// Check that none are disturbed by our fix to keep floats from tunring into ints.
+		{in: `2.5 % 0`, out: `NaN`}, // Make sure our fix to stop floats turning into ints doesn't do something weird with Nan.
+
+		// +Inf (to make sure our fix to stop floats turning into ints doesn't do something weird with +Inf)
+		{in: `179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.0 * 179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.0`, out: `+Inf`},
+
+		// -Inf (to make sure our fix to stop floats turning into ints doesn't do something weird with -Inf)
+		{in: `-179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.0 * 179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.0`, out: `-Inf`},
 		{in: `254 & 3`, out: `2`},
 		{in: `254 | 3`, out: `255`},
 		{in: `254 ^ 3`, out: `253`},
 		{in: `-3 & 3`, out: `1`},
 		{in: `8 & -3`, out: `8`},
-		{in: `8.5 & -3`, out: `8.500 & -3`},
+		{in: `8.5 & -3`, out: `8.5 & -3`},
 		{in: `4 = 4`, out: `true`},
 		{in: `4 <> 4`, out: `false`},
 		{in: `6 > 4`, out: `true`},
@@ -1328,6 +1414,8 @@ func TestReduce(t *testing.T) {
 		{in: `9223372036854775809 - 9223372036854775808`, out: `1`},
 
 		// Boolean literals.
+		{in: `true`, out: `true`},
+		{in: `false`, out: `false`},
 		{in: `true AND false`, out: `false`},
 		{in: `true OR false`, out: `true`},
 		{in: `true OR (foo = bar AND 1 > 2)`, out: `true`},
