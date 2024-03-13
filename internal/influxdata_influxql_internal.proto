@@ -1,6 +1,6 @@
 syntax = "proto2";
 package influxql;
-option go_package = ".;influxql";
+option go_package = "github.com/influxdata/influxql";
 
 message Measurements {
     repeated Measurement Items = 1;
