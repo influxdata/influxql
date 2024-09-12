@@ -867,13 +867,9 @@ func (p *Parser) parseDeleteStatement() (Statement, error) {
 		WalkFunc(stmt.Sources, func(n Node) {
 			if t, ok := n.(*Measurement); ok {
 				// Don't allow database or retention policy in from clause for delete
-				// statement.  They apply to the selected database across all retention
-				// policies.
+				// statement. They apply across selected database.
 				if t.Database != "" {
 					err = &ParseError{Message: "database not supported"}
-				}
-				if t.RetentionPolicy != "" {
-					err = &ParseError{Message: "retention policy not supported"}
 				}
 			}
 		})

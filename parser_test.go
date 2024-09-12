@@ -1789,20 +1789,20 @@ func TestParser_ParseStatement(t *testing.T) {
 			},
 		},
 
-		// See issues https://github.com/influxdata/influxdb/issues/1647
-		// and https://github.com/influxdata/influxdb/issues/4404
-		// DELETE statement
-		//{
-		//	s: `DELETE FROM myseries WHERE host = 'hosta.influxdb.org'`,
-		//	stmt: &influxql.DeleteStatement{
-		//		Source: &influxql.Measurement{Name: "myseries"},
-		//		Condition: &influxql.BinaryExpr{
-		//			Op:  influxql.EQ,
-		//			LHS: &influxql.VarRef{Val: "host"},
-		//			RHS: &influxql.StringLiteral{Val: "hosta.influxdb.org"},
-		//		},
-		//	},
-		//},
+		// DELETE statement with retention policy
+		{
+			s: `DELETE FROM "retention_policy"."myseries" WHERE host = 'hosta.influxdb.org'`,
+			stmt: &influxql.DeleteSeriesStatement{
+				Sources: []influxql.Source{
+					&influxql.Measurement{Name: "myseries", RetentionPolicy: "retention_policy"},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op:  influxql.EQ,
+					LHS: &influxql.VarRef{Val: "host"},
+					RHS: &influxql.StringLiteral{Val: "hosta.influxdb.org"},
+				},
+			},
+		},
 
 		// SHOW GRANTS
 		{
@@ -3547,8 +3547,10 @@ func TestParser_ParseStatement(t *testing.T) {
 		//{s: `DELETE FROM myseries WHERE`, err: `found EOF, expected identifier, string, number, bool at line 1, char 28`},
 		{s: `DELETE`, err: `found EOF, expected FROM, WHERE at line 1, char 8`},
 		{s: `DELETE FROM`, err: `found EOF, expected identifier at line 1, char 13`},
+		{s: `DELETE FROM &foo.myseries`, err: `found &, expected identifier at line 1, char 13`},
+		{s: `DELETE FROM ^foo.myseries`, err: `found ^, expected identifier at line 1, char 13`},
+		{s: `DELETE FROM *foo.myseries`, err: `found *, expected identifier at line 1, char 13`},
 		{s: `DELETE FROM myseries WHERE`, err: `found EOF, expected identifier, string, number, bool at line 1, char 28`},
-		{s: `DELETE FROM "foo".myseries`, err: `retention policy not supported at line 1, char 1`},
 		{s: `DELETE FROM foo..myseries`, err: `database not supported at line 1, char 1`},
 		{s: `DROP MEASUREMENT`, err: `found EOF, expected identifier at line 1, char 18`},
 		{s: `DROP SERIES`, err: `found EOF, expected FROM, WHERE at line 1, char 13`},
