@@ -278,7 +278,20 @@ func (p *Parser) parseCreateRetentionPolicyStatement() (*CreateRetentionPolicySt
 	} else {
 		p.Unscan()
 	}
-
+	if tok, _, _ := p.ScanIgnoreWhitespace(); tok == FUTURE {
+		d, err := p.parseWriteLimit()
+		if err != nil {
+			return nil, err
+		}
+		stmt.FutureWriteLimit = d
+	}
+	if tok, _, _ := p.ScanIgnoreWhitespace(); tok == PAST {
+		d, err := p.parseWriteLimit()
+		if err != nil {
+			return nil, err
+		}
+		stmt.PastWriteLimit = d
+	}
 	return stmt, nil
 }
 
@@ -357,9 +370,21 @@ Loop:
 			}
 		case DEFAULT:
 			stmt.Default = true
+		case FUTURE:
+			d, err := p.parseWriteLimit()
+			if err != nil {
+				return nil, err
+			}
+			stmt.FutureWriteLimit = &d
+		case PAST:
+			d, err := p.parseWriteLimit()
+			if err != nil {
+				return nil, err
+			}
+			stmt.PastWriteLimit = &d
 		default:
 			if len(found) == 0 {
-				return nil, newParseError(tokstr(tok, lit), []string{"DURATION", "REPLICATION", "SHARD", "DEFAULT"}, pos)
+				return nil, newParseError(tokstr(tok, lit), []string{"DURATION", "REPLICATION", "SHARD", "DEFAULT", "FUTURE", "PAST"}, pos)
 			}
 			p.Unscan()
 			break Loop
@@ -368,6 +393,21 @@ Loop:
 	}
 
 	return stmt, nil
+}
+
+// Parses the "LIMIT <duration> from a "FUTURE LIMIT <duration>"
+// or "PAST LIMIT <duration>" statement.
+func (p *Parser) parseWriteLimit() (time.Duration, error) {
+	tok, pos, lit := p.ScanIgnoreWhitespace()
+	if tok == LIMIT {
+		d, err := p.ParseDuration()
+		if err != nil {
+			return 0, err
+		}
+		return d, nil
+	} else {
+		return 0, newParseError(tokstr(tok, lit), []string{"LIMIT"}, pos)
+	}
 }
 
 // ParseInt parses a string representing a base 10 integer and returns the number.

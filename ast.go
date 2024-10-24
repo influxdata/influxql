@@ -931,6 +931,12 @@ type CreateRetentionPolicyStatement struct {
 
 	// Shard Duration.
 	ShardGroupDuration time.Duration
+
+	// Error on writes after this duration from now
+	FutureWriteLimit time.Duration
+
+	// Error on writes before this duration from now
+	PastWriteLimit time.Duration
 }
 
 // String returns a string representation of the create retention policy.
@@ -983,6 +989,12 @@ type AlterRetentionPolicyStatement struct {
 
 	// Duration of the Shard.
 	ShardGroupDuration *time.Duration
+
+	// Cutoff for future writes
+	FutureWriteLimit *time.Duration
+
+	// Cutoff for past writes
+	PastWriteLimit *time.Duration
 }
 
 // String returns a string representation of the alter retention policy statement.
