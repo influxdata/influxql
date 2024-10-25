@@ -3389,6 +3389,40 @@ func TestParser_ParseStatement(t *testing.T) {
 				ShardGroupDuration: time.Second,
 			},
 		},
+		{
+			s: `CREATE RETENTION POLICY policy1 ON testdb DURATION 1h REPLICATION 2 SHARD DURATION 1s PAST LIMIT 1h`,
+			stmt: &influxql.CreateRetentionPolicyStatement{
+				Name:               "policy1",
+				Database:           "testdb",
+				Duration:           time.Hour,
+				Replication:        2,
+				ShardGroupDuration: time.Second,
+				PastWriteLimit:     time.Hour,
+			},
+		},
+		{
+			s: `CREATE RETENTION POLICY policy1 ON testdb DURATION 1h REPLICATION 2 SHARD DURATION 1s FUTURE LIMIT 35m`,
+			stmt: &influxql.CreateRetentionPolicyStatement{
+				Name:               "policy1",
+				Database:           "testdb",
+				Duration:           time.Hour,
+				Replication:        2,
+				ShardGroupDuration: time.Second,
+				FutureWriteLimit:   time.Minute * 35,
+			},
+		},
+		{
+			s: `CREATE RETENTION POLICY policy1 ON testdb DURATION 1h REPLICATION 2 SHARD DURATION 1s FUTURE LIMIT 12h PAST LIMIT 3s`,
+			stmt: &influxql.CreateRetentionPolicyStatement{
+				Name:               "policy1",
+				Database:           "testdb",
+				Duration:           time.Hour,
+				Replication:        2,
+				ShardGroupDuration: time.Second,
+				FutureWriteLimit:   time.Hour * 12,
+				PastWriteLimit:     time.Second * 3,
+			},
+		},
 
 		// ALTER RETENTION POLICY
 		{

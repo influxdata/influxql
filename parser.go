@@ -284,6 +284,8 @@ func (p *Parser) parseCreateRetentionPolicyStatement() (*CreateRetentionPolicySt
 			return nil, err
 		}
 		stmt.FutureWriteLimit = d
+	} else {
+		p.Unscan()
 	}
 	if tok, _, _ := p.ScanIgnoreWhitespace(); tok == PAST {
 		d, err := p.parseWriteLimit()
@@ -291,6 +293,8 @@ func (p *Parser) parseCreateRetentionPolicyStatement() (*CreateRetentionPolicySt
 			return nil, err
 		}
 		stmt.PastWriteLimit = d
+	} else {
+		p.Unscan()
 	}
 	return stmt, nil
 }

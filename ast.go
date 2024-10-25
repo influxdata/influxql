@@ -957,6 +957,14 @@ func (s *CreateRetentionPolicyStatement) String() string {
 	if s.Default {
 		_, _ = buf.WriteString(" DEFAULT")
 	}
+	if s.FutureWriteLimit != 0 {
+		_, _ = buf.WriteString(" FUTURE LIMIT ")
+		_, _ = buf.WriteString(FormatDuration(s.FutureWriteLimit))
+	}
+	if s.PastWriteLimit != 0 {
+		_, _ = buf.WriteString(" PAST LIMIT ")
+		_, _ = buf.WriteString(FormatDuration(s.PastWriteLimit))
+	}
 	return buf.String()
 }
 
