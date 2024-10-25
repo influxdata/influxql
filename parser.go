@@ -1845,6 +1845,8 @@ func (p *Parser) parseCreateDatabaseStatement() (*CreateDatabaseStatement, error
 			}
 		}
 
+		// TODO(DSB): add parsing for FutureWriteLimit ad PastWriteLimit
+
 		// Look for "NAME"
 		if err := p.parseTokens([]Token{NAME}); err != nil {
 			p.Unscan()

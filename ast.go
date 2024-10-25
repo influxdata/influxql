@@ -592,6 +592,10 @@ type CreateDatabaseStatement struct {
 
 	// RetentionPolicyShardGroupDuration indicates shard group duration for the new database.
 	RetentionPolicyShardGroupDuration time.Duration
+
+	FutureWriteLimit *time.Duration
+
+	PastWriteLimit *time.Duration
 }
 
 // String returns a string representation of the create database statement.
@@ -616,6 +620,14 @@ func (s *CreateDatabaseStatement) String() string {
 		if s.RetentionPolicyName != "" {
 			_, _ = buf.WriteString(" NAME ")
 			_, _ = buf.WriteString(QuoteIdent(s.RetentionPolicyName))
+		}
+		if s.FutureWriteLimit != nil {
+			_, _ = buf.WriteString(" FUTURE LIMIT ")
+			_, _ = buf.WriteString(FormatDuration(*s.FutureWriteLimit))
+		}
+		if s.PastWriteLimit != nil {
+			_, _ = buf.WriteString(" PAST LIMIT ")
+			_, _ = buf.WriteString(FormatDuration(*s.PastWriteLimit))
 		}
 	}
 
@@ -1030,6 +1042,16 @@ func (s *AlterRetentionPolicyStatement) String() string {
 
 	if s.Default {
 		_, _ = buf.WriteString(" DEFAULT")
+	}
+
+	if s.FutureWriteLimit != nil && *s.FutureWriteLimit != 0 {
+		_, _ = buf.WriteString(" FUTURE LIMIT ")
+		_, _ = buf.WriteString(FormatDuration(*s.FutureWriteLimit))
+	}
+
+	if s.PastWriteLimit != nil && *s.PastWriteLimit != 0 {
+		_, _ = buf.WriteString(" PAST LIMIT ")
+		_, _ = buf.WriteString(FormatDuration(*s.PastWriteLimit))
 	}
 
 	return buf.String()
