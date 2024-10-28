@@ -1799,8 +1799,8 @@ func (p *Parser) parseCreateDatabaseStatement() (*CreateDatabaseStatement, error
 	if tok, _, _ := p.ScanIgnoreWhitespace(); tok == WITH {
 		// validate that at least one of DURATION, NAME, REPLICATION or SHARD is provided
 		tok, pos, lit := p.ScanIgnoreWhitespace()
-		if tok != DURATION && tok != NAME && tok != REPLICATION && tok != SHARD {
-			return nil, newParseError(tokstr(tok, lit), []string{"DURATION", "NAME", "REPLICATION", "SHARD"}, pos)
+		if tok != DURATION && tok != NAME && tok != REPLICATION && tok != SHARD && tok != FUTURE && tok != PAST {
+			return nil, newParseError(tokstr(tok, lit), []string{"DURATION", "NAME", "REPLICATION", "SHARD", "FUTURE", "PAST"}, pos)
 		}
 		// rewind
 		p.Unscan()
@@ -1845,7 +1845,25 @@ func (p *Parser) parseCreateDatabaseStatement() (*CreateDatabaseStatement, error
 			}
 		}
 
-		// TODO(DSB): add parsing for FutureWriteLimit ad PastWriteLimit
+		// Look for write limits
+		if tok, _, _ := p.ScanIgnoreWhitespace(); tok == FUTURE {
+			d, err := p.parseWriteLimit()
+			if err != nil {
+				return nil, err
+			}
+			stmt.FutureWriteLimit = &d
+		} else {
+			p.Unscan()
+		}
+		if tok, _, _ := p.ScanIgnoreWhitespace(); tok == PAST {
+			d, err := p.parseWriteLimit()
+			if err != nil {
+				return nil, err
+			}
+			stmt.PastWriteLimit = &d
+		} else {
+			p.Unscan()
+		}
 
 		// Look for "NAME"
 		if err := p.parseTokens([]Token{NAME}); err != nil {

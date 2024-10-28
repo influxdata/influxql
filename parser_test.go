@@ -3150,6 +3150,68 @@ func TestParser_ParseStatement(t *testing.T) {
 			},
 		},
 
+		{
+			s: `CREATE DATABASE testdb WITH DURATION 24h PAST LIMIT 32s`,
+			stmt: &influxql.CreateDatabaseStatement{
+				Name:                    "testdb",
+				RetentionPolicyCreate:   true,
+				RetentionPolicyDuration: duration(24 * time.Hour),
+				PastWriteLimit:          duration(32 * time.Second),
+			},
+		},
+		{
+			s: `CREATE DATABASE testdb WITH SHARD DURATION 30m FUTURE LIMIT 45m`,
+			stmt: &influxql.CreateDatabaseStatement{
+				Name:                              "testdb",
+				RetentionPolicyCreate:             true,
+				RetentionPolicyShardGroupDuration: 30 * time.Minute,
+				FutureWriteLimit:                  duration(45 * time.Minute),
+			},
+		},
+		{
+			s: `CREATE DATABASE testdb WITH REPLICATION 2 FUTURE LIMIT 1h PAST LIMIT 67ms`,
+			stmt: &influxql.CreateDatabaseStatement{
+				Name:                       "testdb",
+				RetentionPolicyCreate:      true,
+				RetentionPolicyReplication: intptr(2),
+				FutureWriteLimit:           duration(time.Hour),
+				PastWriteLimit:             duration(67 * time.Millisecond),
+			},
+		},
+		{
+			s: `CREATE DATABASE testdb WITH FUTURE LIMIT 13h PAST LIMIT 1h NAME test_name`,
+			stmt: &influxql.CreateDatabaseStatement{
+				Name:                  "testdb",
+				RetentionPolicyCreate: true,
+				RetentionPolicyName:   "test_name",
+				FutureWriteLimit:      duration(13 * time.Hour),
+				PastWriteLimit:        duration(time.Hour),
+			},
+		},
+		{
+			s: `CREATE DATABASE testdb WITH DURATION 24h REPLICATION 2 PAST LIMIT 59h NAME test_name`,
+			stmt: &influxql.CreateDatabaseStatement{
+				Name:                       "testdb",
+				RetentionPolicyCreate:      true,
+				RetentionPolicyDuration:    duration(24 * time.Hour),
+				RetentionPolicyReplication: intptr(2),
+				RetentionPolicyName:        "test_name",
+				PastWriteLimit:             duration(59 * time.Hour),
+			},
+		},
+		{
+			s: `CREATE DATABASE testdb WITH DURATION 24h REPLICATION 2 SHARD DURATION 10m FUTURE LIMIT 6704ns NAME test_name`,
+			stmt: &influxql.CreateDatabaseStatement{
+				Name:                              "testdb",
+				RetentionPolicyCreate:             true,
+				RetentionPolicyDuration:           duration(24 * time.Hour),
+				RetentionPolicyReplication:        intptr(2),
+				RetentionPolicyName:               "test_name",
+				RetentionPolicyShardGroupDuration: 10 * time.Minute,
+				FutureWriteLimit:                  duration(6704 * time.Nanosecond),
+			},
+		},
+
 		// CREATE USER statement
 		{
 			s: `CREATE USER testuser WITH PASSWORD 'pwd1337'`,
@@ -3628,7 +3690,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{s: `DROP FOO`, err: `found FOO, expected CONTINUOUS, DATABASE, MEASUREMENT, RETENTION, SERIES, SHARD, SUBSCRIPTION, USER at line 1, char 6`},
 		{s: `CREATE FOO`, err: `found FOO, expected CONTINUOUS, DATABASE, USER, RETENTION, SUBSCRIPTION at line 1, char 8`},
 		{s: `CREATE DATABASE`, err: `found EOF, expected identifier at line 1, char 17`},
-		{s: `CREATE DATABASE "testdb" WITH`, err: `found EOF, expected DURATION, NAME, REPLICATION, SHARD at line 1, char 31`},
+		{s: `CREATE DATABASE "testdb" WITH`, err: `found EOF, expected DURATION, NAME, REPLICATION, SHARD, FUTURE, PAST at line 1, char 31`},
 		{s: `CREATE DATABASE "testdb" WITH DURATION`, err: `found EOF, expected duration at line 1, char 40`},
 		{s: `CREATE DATABASE "testdb" WITH REPLICATION`, err: `found EOF, expected integer at line 1, char 43`},
 		{s: `CREATE DATABASE "testdb" WITH NAME`, err: `found EOF, expected identifier at line 1, char 36`},

@@ -617,10 +617,6 @@ func (s *CreateDatabaseStatement) String() string {
 			_, _ = buf.WriteString(" SHARD DURATION ")
 			_, _ = buf.WriteString(s.RetentionPolicyShardGroupDuration.String())
 		}
-		if s.RetentionPolicyName != "" {
-			_, _ = buf.WriteString(" NAME ")
-			_, _ = buf.WriteString(QuoteIdent(s.RetentionPolicyName))
-		}
 		if s.FutureWriteLimit != nil {
 			_, _ = buf.WriteString(" FUTURE LIMIT ")
 			_, _ = buf.WriteString(FormatDuration(*s.FutureWriteLimit))
@@ -628,6 +624,10 @@ func (s *CreateDatabaseStatement) String() string {
 		if s.PastWriteLimit != nil {
 			_, _ = buf.WriteString(" PAST LIMIT ")
 			_, _ = buf.WriteString(FormatDuration(*s.PastWriteLimit))
+		}
+		if s.RetentionPolicyName != "" {
+			_, _ = buf.WriteString(" NAME ")
+			_, _ = buf.WriteString(QuoteIdent(s.RetentionPolicyName))
 		}
 	}
 
