@@ -3150,6 +3150,68 @@ func TestParser_ParseStatement(t *testing.T) {
 			},
 		},
 
+		{
+			s: `CREATE DATABASE testdb WITH DURATION 24h PAST LIMIT 32s`,
+			stmt: &influxql.CreateDatabaseStatement{
+				Name:                    "testdb",
+				RetentionPolicyCreate:   true,
+				RetentionPolicyDuration: duration(24 * time.Hour),
+				PastWriteLimit:          duration(32 * time.Second),
+			},
+		},
+		{
+			s: `CREATE DATABASE testdb WITH SHARD DURATION 30m FUTURE LIMIT 45m`,
+			stmt: &influxql.CreateDatabaseStatement{
+				Name:                              "testdb",
+				RetentionPolicyCreate:             true,
+				RetentionPolicyShardGroupDuration: 30 * time.Minute,
+				FutureWriteLimit:                  duration(45 * time.Minute),
+			},
+		},
+		{
+			s: `CREATE DATABASE testdb WITH REPLICATION 2 FUTURE LIMIT 1h PAST LIMIT 67ms`,
+			stmt: &influxql.CreateDatabaseStatement{
+				Name:                       "testdb",
+				RetentionPolicyCreate:      true,
+				RetentionPolicyReplication: intptr(2),
+				FutureWriteLimit:           duration(time.Hour),
+				PastWriteLimit:             duration(67 * time.Millisecond),
+			},
+		},
+		{
+			s: `CREATE DATABASE testdb WITH FUTURE LIMIT 13h PAST LIMIT 1h NAME test_name`,
+			stmt: &influxql.CreateDatabaseStatement{
+				Name:                  "testdb",
+				RetentionPolicyCreate: true,
+				RetentionPolicyName:   "test_name",
+				FutureWriteLimit:      duration(13 * time.Hour),
+				PastWriteLimit:        duration(time.Hour),
+			},
+		},
+		{
+			s: `CREATE DATABASE testdb WITH DURATION 24h REPLICATION 2 PAST LIMIT 59h NAME test_name`,
+			stmt: &influxql.CreateDatabaseStatement{
+				Name:                       "testdb",
+				RetentionPolicyCreate:      true,
+				RetentionPolicyDuration:    duration(24 * time.Hour),
+				RetentionPolicyReplication: intptr(2),
+				RetentionPolicyName:        "test_name",
+				PastWriteLimit:             duration(59 * time.Hour),
+			},
+		},
+		{
+			s: `CREATE DATABASE testdb WITH DURATION 24h REPLICATION 2 SHARD DURATION 10m FUTURE LIMIT 6704ns NAME test_name`,
+			stmt: &influxql.CreateDatabaseStatement{
+				Name:                              "testdb",
+				RetentionPolicyCreate:             true,
+				RetentionPolicyDuration:           duration(24 * time.Hour),
+				RetentionPolicyReplication:        intptr(2),
+				RetentionPolicyName:               "test_name",
+				RetentionPolicyShardGroupDuration: 10 * time.Minute,
+				FutureWriteLimit:                  duration(6704 * time.Nanosecond),
+			},
+		},
+
 		// CREATE USER statement
 		{
 			s: `CREATE USER testuser WITH PASSWORD 'pwd1337'`,
@@ -3389,61 +3451,110 @@ func TestParser_ParseStatement(t *testing.T) {
 				ShardGroupDuration: time.Second,
 			},
 		},
+		{
+			s: `CREATE RETENTION POLICY policy1 ON testdb DURATION 1h REPLICATION 2 SHARD DURATION 1s PAST LIMIT 1h`,
+			stmt: &influxql.CreateRetentionPolicyStatement{
+				Name:               "policy1",
+				Database:           "testdb",
+				Duration:           time.Hour,
+				Replication:        2,
+				ShardGroupDuration: time.Second,
+				PastWriteLimit:     time.Hour,
+			},
+		},
+		{
+			s: `CREATE RETENTION POLICY policy1 ON testdb DURATION 1h REPLICATION 2 SHARD DURATION 1s FUTURE LIMIT 35m`,
+			stmt: &influxql.CreateRetentionPolicyStatement{
+				Name:               "policy1",
+				Database:           "testdb",
+				Duration:           time.Hour,
+				Replication:        2,
+				ShardGroupDuration: time.Second,
+				FutureWriteLimit:   time.Minute * 35,
+			},
+		},
+		{
+			s: `CREATE RETENTION POLICY policy1 ON testdb DURATION 1h REPLICATION 2 SHARD DURATION 1s FUTURE LIMIT 12h PAST LIMIT 3s`,
+			stmt: &influxql.CreateRetentionPolicyStatement{
+				Name:               "policy1",
+				Database:           "testdb",
+				Duration:           time.Hour,
+				Replication:        2,
+				ShardGroupDuration: time.Second,
+				FutureWriteLimit:   time.Hour * 12,
+				PastWriteLimit:     time.Second * 3,
+			},
+		},
 
 		// ALTER RETENTION POLICY
 		{
 			s:    `ALTER RETENTION POLICY policy1 ON testdb DURATION 1m REPLICATION 4 DEFAULT`,
-			stmt: newAlterRetentionPolicyStatement("policy1", "testdb", time.Minute, -1, 4, true),
+			stmt: newAlterRetentionPolicyStatement("policy1", "testdb", time.Minute, -1, 4, true, -1, -1),
 		},
 
 		// ALTER RETENTION POLICY with options in reverse order
 		{
 			s:    `ALTER RETENTION POLICY policy1 ON testdb DEFAULT REPLICATION 4 DURATION 1m`,
-			stmt: newAlterRetentionPolicyStatement("policy1", "testdb", time.Minute, -1, 4, true),
+			stmt: newAlterRetentionPolicyStatement("policy1", "testdb", time.Minute, -1, 4, true, -1, -1),
 		},
 
 		// ALTER RETENTION POLICY with infinite retention
 		{
 			s:    `ALTER RETENTION POLICY policy1 ON testdb DEFAULT REPLICATION 4 DURATION INF`,
-			stmt: newAlterRetentionPolicyStatement("policy1", "testdb", 0, -1, 4, true),
+			stmt: newAlterRetentionPolicyStatement("policy1", "testdb", 0, -1, 4, true, -1, -1),
 		},
 
 		// ALTER RETENTION POLICY without optional DURATION
 		{
 			s:    `ALTER RETENTION POLICY policy1 ON testdb DEFAULT REPLICATION 4`,
-			stmt: newAlterRetentionPolicyStatement("policy1", "testdb", -1, -1, 4, true),
+			stmt: newAlterRetentionPolicyStatement("policy1", "testdb", -1, -1, 4, true, -1, -1),
 		},
 
 		// ALTER RETENTION POLICY without optional REPLICATION
 		{
 			s:    `ALTER RETENTION POLICY policy1 ON testdb DEFAULT`,
-			stmt: newAlterRetentionPolicyStatement("policy1", "testdb", -1, -1, -1, true),
+			stmt: newAlterRetentionPolicyStatement("policy1", "testdb", -1, -1, -1, true, -1, -1),
 		},
 
 		// ALTER RETENTION POLICY without optional DEFAULT
 		{
 			s:    `ALTER RETENTION POLICY policy1 ON testdb REPLICATION 4`,
-			stmt: newAlterRetentionPolicyStatement("policy1", "testdb", -1, -1, 4, false),
+			stmt: newAlterRetentionPolicyStatement("policy1", "testdb", -1, -1, 4, false, -1, -1),
 		},
 		// ALTER default retention policy unquoted
 		{
 			s:    `ALTER RETENTION POLICY default ON testdb REPLICATION 4`,
-			stmt: newAlterRetentionPolicyStatement("default", "testdb", -1, -1, 4, false),
+			stmt: newAlterRetentionPolicyStatement("default", "testdb", -1, -1, 4, false, -1, -1),
 		},
 		// ALTER RETENTION POLICY with SHARD duration
 		{
 			s:    `ALTER RETENTION POLICY policy1 ON testdb REPLICATION 4 SHARD DURATION 10m`,
-			stmt: newAlterRetentionPolicyStatement("policy1", "testdb", -1, 10*time.Minute, 4, false),
+			stmt: newAlterRetentionPolicyStatement("policy1", "testdb", -1, 10*time.Minute, 4, false, -1, -1),
 		},
 		// ALTER RETENTION POLICY with all options
 		{
 			s:    `ALTER RETENTION POLICY default ON testdb DURATION 0s REPLICATION 4 SHARD DURATION 10m DEFAULT`,
-			stmt: newAlterRetentionPolicyStatement("default", "testdb", time.Duration(0), 10*time.Minute, 4, true),
+			stmt: newAlterRetentionPolicyStatement("default", "testdb", time.Duration(0), 10*time.Minute, 4, true, -1, -1),
 		},
 		// ALTER RETENTION POLICY with 0s shard duration
 		{
 			s:    `ALTER RETENTION POLICY default ON testdb DURATION 0s REPLICATION 1 SHARD DURATION 0s`,
-			stmt: newAlterRetentionPolicyStatement("default", "testdb", time.Duration(0), 0, 1, false),
+			stmt: newAlterRetentionPolicyStatement("default", "testdb", time.Duration(0), 0, 1, false, -1, -1),
+		},
+		// ALTER RETENTION POLICY with future write limit
+		{
+			s:    `ALTER RETENTION POLICY default ON testdb DURATION 0s REPLICATION 1 FUTURE LIMIT 1h`,
+			stmt: newAlterRetentionPolicyStatement("default", "testdb", time.Duration(0), -1, 1, false, time.Hour, time.Duration(-1)),
+		},
+		// ALTER RETENTION POLICY with past write limit
+		{
+			s:    `ALTER RETENTION POLICY default ON testdb DURATION 0s REPLICATION 1 PAST LIMIT 35m`,
+			stmt: newAlterRetentionPolicyStatement("default", "testdb", time.Duration(0), -1, 1, false, time.Duration(-1), time.Minute*35),
+		},
+		// ALTER RETENTION POLICY with future and past write limits
+		{
+			s:    `ALTER RETENTION POLICY default ON testdb DURATION 0s REPLICATION 1 FUTURE LIMIT 55s PAST LIMIT 52m`,
+			stmt: newAlterRetentionPolicyStatement("default", "testdb", time.Duration(0), -1, 1, false, time.Second*55, time.Minute*52),
 		},
 
 		// SHOW STATS
@@ -3579,7 +3690,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{s: `DROP FOO`, err: `found FOO, expected CONTINUOUS, DATABASE, MEASUREMENT, RETENTION, SERIES, SHARD, SUBSCRIPTION, USER at line 1, char 6`},
 		{s: `CREATE FOO`, err: `found FOO, expected CONTINUOUS, DATABASE, USER, RETENTION, SUBSCRIPTION at line 1, char 8`},
 		{s: `CREATE DATABASE`, err: `found EOF, expected identifier at line 1, char 17`},
-		{s: `CREATE DATABASE "testdb" WITH`, err: `found EOF, expected DURATION, NAME, REPLICATION, SHARD at line 1, char 31`},
+		{s: `CREATE DATABASE "testdb" WITH`, err: `found EOF, expected DURATION, NAME, REPLICATION, SHARD, FUTURE, PAST at line 1, char 31`},
 		{s: `CREATE DATABASE "testdb" WITH DURATION`, err: `found EOF, expected duration at line 1, char 40`},
 		{s: `CREATE DATABASE "testdb" WITH REPLICATION`, err: `found EOF, expected integer at line 1, char 43`},
 		{s: `CREATE DATABASE "testdb" WITH NAME`, err: `found EOF, expected identifier at line 1, char 36`},
@@ -3692,7 +3803,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{s: `ALTER RETENTION`, err: `found EOF, expected POLICY at line 1, char 17`},
 		{s: `ALTER RETENTION POLICY`, err: `found EOF, expected identifier at line 1, char 24`},
 		{s: `ALTER RETENTION POLICY policy1`, err: `found EOF, expected ON at line 1, char 32`}, {s: `ALTER RETENTION POLICY policy1 ON`, err: `found EOF, expected identifier at line 1, char 35`},
-		{s: `ALTER RETENTION POLICY policy1 ON testdb`, err: `found EOF, expected DURATION, REPLICATION, SHARD, DEFAULT at line 1, char 42`},
+		{s: `ALTER RETENTION POLICY policy1 ON testdb`, err: `found EOF, expected DURATION, REPLICATION, SHARD, DEFAULT, FUTURE, PAST at line 1, char 42`},
 		{s: `ALTER RETENTION POLICY policy1 ON testdb REPLICATION 1 REPLICATION 2`, err: `found duplicate REPLICATION option at line 1, char 56`},
 		{s: `ALTER RETENTION POLICY policy1 ON testdb DURATION 15251w`, err: `overflowed duration 15251w: choose a smaller duration or INF at line 1, char 51`},
 		{s: `ALTER RETENTION POLICY policy1 ON testdb DURATION INF SHARD DURATION INF`, err: `invalid duration INF for shard duration at line 1, char 70`},
@@ -4423,7 +4534,7 @@ func errstring(err error) string {
 }
 
 // newAlterRetentionPolicyStatement creates an initialized AlterRetentionPolicyStatement.
-func newAlterRetentionPolicyStatement(name string, DB string, d, sd time.Duration, replication int, dfault bool) *influxql.AlterRetentionPolicyStatement {
+func newAlterRetentionPolicyStatement(name, DB string, d, sd time.Duration, replication int, dfault bool, future, past time.Duration) *influxql.AlterRetentionPolicyStatement {
 	stmt := &influxql.AlterRetentionPolicyStatement{
 		Name:     name,
 		Database: DB,
@@ -4440,6 +4551,14 @@ func newAlterRetentionPolicyStatement(name string, DB string, d, sd time.Duratio
 
 	if replication > -1 {
 		stmt.Replication = &replication
+	}
+
+	if future > -1 {
+		stmt.FutureWriteLimit = &future
+	}
+
+	if past > -1 {
+		stmt.PastWriteLimit = &past
 	}
 
 	return stmt
