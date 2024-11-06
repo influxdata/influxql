@@ -3517,7 +3517,11 @@ func (m *Measurement) String() string {
 		_, _ = buf.WriteString(m.Regex.String())
 	}
 
-	return buf.String()
+	if buf.Len() == 0 {
+		return QuoteIdent("")
+	} else {
+		return buf.String()
+	}
 }
 
 // SubQuery is a source with a SelectStatement as the backing store.
