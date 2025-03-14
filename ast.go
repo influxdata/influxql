@@ -3813,7 +3813,12 @@ type ParenExpr struct {
 }
 
 // String returns a string representation of the parenthesized expression.
-func (e *ParenExpr) String() string { return fmt.Sprintf("(%s)", e.Expr.String()) }
+func (e *ParenExpr) String() string {
+	if e.Expr == nil || e == nil {
+		return ""
+	}
+	return fmt.Sprintf("(%s)", e.Expr.String())
+}
 
 // RegexLiteral represents a regular expression.
 type RegexLiteral struct {
