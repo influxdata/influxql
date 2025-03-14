@@ -288,7 +288,12 @@ type Query struct {
 }
 
 // String returns a string representation of the query.
-func (q *Query) String() string { return q.Statements.String() }
+func (q *Query) String() string {
+	if q == nil {
+		return ""
+	}
+	return q.Statements.String()
+}
 
 // Statements represents a list of statements.
 type Statements []Statement
@@ -548,6 +553,9 @@ type SortField struct {
 
 // String returns a string representation of a sort field.
 func (field *SortField) String() string {
+	if field == nil {
+		return ""
+	}
 	var buf strings.Builder
 	if field.Name != "" {
 		_, _ = buf.WriteString(field.Name)
@@ -600,6 +608,9 @@ type CreateDatabaseStatement struct {
 
 // String returns a string representation of the create database statement.
 func (s *CreateDatabaseStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("CREATE DATABASE ")
 	_, _ = buf.WriteString(QuoteIdent(s.Name))
@@ -647,6 +658,9 @@ type DropDatabaseStatement struct {
 
 // String returns a string representation of the drop database statement.
 func (s *DropDatabaseStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("DROP DATABASE ")
 	_, _ = buf.WriteString(QuoteIdent(s.Name))
@@ -669,6 +683,9 @@ type DropRetentionPolicyStatement struct {
 
 // String returns a string representation of the drop retention policy statement.
 func (s *DropRetentionPolicyStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("DROP RETENTION POLICY ")
 	_, _ = buf.WriteString(QuoteIdent(s.Name))
@@ -701,6 +718,9 @@ type CreateUserStatement struct {
 
 // String returns a string representation of the create user statement.
 func (s *CreateUserStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("CREATE USER ")
 	_, _ = buf.WriteString(QuoteIdent(s.Name))
@@ -725,6 +745,9 @@ type DropUserStatement struct {
 
 // String returns a string representation of the drop user statement.
 func (s *DropUserStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("DROP USER ")
 	_, _ = buf.WriteString(QuoteIdent(s.Name))
@@ -782,6 +805,9 @@ type GrantStatement struct {
 
 // String returns a string representation of the grant statement.
 func (s *GrantStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("GRANT ")
 	_, _ = buf.WriteString(s.Privilege.String())
@@ -810,6 +836,9 @@ type GrantAdminStatement struct {
 
 // String returns a string representation of the grant admin statement.
 func (s *GrantAdminStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("GRANT ALL PRIVILEGES TO ")
 	_, _ = buf.WriteString(QuoteIdent(s.User))
@@ -832,6 +861,9 @@ type KillQueryStatement struct {
 
 // String returns a string representation of the kill query statement.
 func (s *KillQueryStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("KILL QUERY ")
 	_, _ = buf.WriteString(strconv.FormatUint(s.QueryID, 10))
@@ -858,6 +890,9 @@ type SetPasswordUserStatement struct {
 
 // String returns a string representation of the set password statement.
 func (s *SetPasswordUserStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("SET PASSWORD FOR ")
 	_, _ = buf.WriteString(QuoteIdent(s.Name))
@@ -885,6 +920,9 @@ type RevokeStatement struct {
 
 // String returns a string representation of the revoke statement.
 func (s *RevokeStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("REVOKE ")
 	_, _ = buf.WriteString(s.Privilege.String())
@@ -913,6 +951,9 @@ type RevokeAdminStatement struct {
 
 // String returns a string representation of the revoke admin statement.
 func (s *RevokeAdminStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("REVOKE ALL PRIVILEGES FROM ")
 	_, _ = buf.WriteString(QuoteIdent(s.User))
@@ -953,6 +994,9 @@ type CreateRetentionPolicyStatement struct {
 
 // String returns a string representation of the create retention policy.
 func (s *CreateRetentionPolicyStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("CREATE RETENTION POLICY ")
 	_, _ = buf.WriteString(QuoteIdent(s.Name))
@@ -1019,6 +1063,9 @@ type AlterRetentionPolicyStatement struct {
 
 // String returns a string representation of the alter retention policy statement.
 func (s *AlterRetentionPolicyStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("ALTER RETENTION POLICY ")
 	_, _ = buf.WriteString(QuoteIdent(s.Name))
@@ -1799,6 +1846,9 @@ func (s *SelectStatement) Reduce(valuer Valuer) *SelectStatement {
 
 // String returns a string representation of the select statement.
 func (s *SelectStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("SELECT ")
 	_, _ = buf.WriteString(s.Fields.String())
@@ -2140,6 +2190,9 @@ type ExplainStatement struct {
 
 // String returns a string representation of the explain statement.
 func (e *ExplainStatement) String() string {
+	if e == nil {
+		return ""
+	}
 	var buf strings.Builder
 	buf.WriteString("EXPLAIN ")
 	if e.Analyze {
@@ -2168,6 +2221,9 @@ type DeleteStatement struct {
 
 // String returns a string representation of the delete statement.
 func (s *DeleteStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("DELETE FROM ")
 	_, _ = buf.WriteString(s.Source.String())
@@ -2216,6 +2272,9 @@ type ShowSeriesStatement struct {
 
 // String returns a string representation of the list series statement.
 func (s *ShowSeriesStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("SHOW SERIES")
 
@@ -2268,6 +2327,9 @@ type DropSeriesStatement struct {
 
 // String returns a string representation of the drop series statement.
 func (s *DropSeriesStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	buf.WriteString("DROP SERIES")
 
@@ -2299,6 +2361,9 @@ type DeleteSeriesStatement struct {
 
 // String returns a string representation of the delete series statement.
 func (s *DeleteSeriesStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	buf.WriteString("DELETE")
 
@@ -2328,6 +2393,9 @@ type DropShardStatement struct {
 
 // String returns a string representation of the drop series statement.
 func (s *DropShardStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	buf.WriteString("DROP SHARD ")
 	buf.WriteString(strconv.FormatUint(s.ID, 10))
@@ -2363,6 +2431,9 @@ type ShowSeriesCardinalityStatement struct {
 
 // String returns a string representation of the show continuous queries statement.
 func (s *ShowSeriesCardinalityStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("SHOW SERIES")
 
@@ -2430,6 +2501,9 @@ type ShowGrantsForUserStatement struct {
 
 // String returns a string representation of the show grants for user.
 func (s *ShowGrantsForUserStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("SHOW GRANTS FOR ")
 	_, _ = buf.WriteString(QuoteIdent(s.Name))
@@ -2446,7 +2520,12 @@ func (s *ShowGrantsForUserStatement) RequiredPrivileges() (ExecutionPrivileges, 
 type ShowDatabasesStatement struct{}
 
 // String returns a string representation of the show databases command.
-func (s *ShowDatabasesStatement) String() string { return "SHOW DATABASES" }
+func (s *ShowDatabasesStatement) String() string {
+	if s == nil {
+		return ""
+	}
+	return "SHOW DATABASES"
+}
 
 // RequiredPrivileges returns the privilege required to execute a ShowDatabasesStatement.
 func (s *ShowDatabasesStatement) RequiredPrivileges() (ExecutionPrivileges, error) {
@@ -2476,6 +2555,9 @@ type CreateContinuousQueryStatement struct {
 
 // String returns a string representation of the statement.
 func (s *CreateContinuousQueryStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	fmt.Fprintf(&buf, "CREATE CONTINUOUS QUERY %s ON %s ", QuoteIdent(s.Name), QuoteIdent(s.Database))
 
@@ -2543,6 +2625,9 @@ type DropContinuousQueryStatement struct {
 
 // String returns a string representation of the statement.
 func (s *DropContinuousQueryStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	return fmt.Sprintf("DROP CONTINUOUS QUERY %s ON %s", QuoteIdent(s.Name), QuoteIdent(s.Database))
 }
 
@@ -2568,6 +2653,9 @@ type ShowMeasurementCardinalityStatement struct {
 
 // String returns a string representation of the statement.
 func (s *ShowMeasurementCardinalityStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("SHOW MEASUREMENT")
 
@@ -2646,6 +2734,9 @@ type ShowMeasurementsStatement struct {
 
 // String returns a string representation of the statement.
 func (s *ShowMeasurementsStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("SHOW MEASUREMENTS")
 
@@ -2709,6 +2800,9 @@ type DropMeasurementStatement struct {
 
 // String returns a string representation of the drop measurement statement.
 func (s *DropMeasurementStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("DROP MEASUREMENT ")
 	_, _ = buf.WriteString(QuoteIdent(s.Name))
@@ -2725,6 +2819,9 @@ type ShowQueriesStatement struct{}
 
 // String returns a string representation of the show queries statement.
 func (s *ShowQueriesStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	return "SHOW QUERIES"
 }
 
@@ -2741,6 +2838,9 @@ type ShowRetentionPoliciesStatement struct {
 
 // String returns a string representation of a ShowRetentionPoliciesStatement.
 func (s *ShowRetentionPoliciesStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("SHOW RETENTION POLICIES")
 	if s.Database != "" {
@@ -2767,6 +2867,9 @@ type ShowStatsStatement struct {
 
 // String returns a string representation of a ShowStatsStatement.
 func (s *ShowStatsStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("SHOW STATS")
 	if s.Module != "" {
@@ -2785,7 +2888,12 @@ func (s *ShowStatsStatement) RequiredPrivileges() (ExecutionPrivileges, error) {
 type ShowShardGroupsStatement struct{}
 
 // String returns a string representation of the SHOW SHARD GROUPS command.
-func (s *ShowShardGroupsStatement) String() string { return "SHOW SHARD GROUPS" }
+func (s *ShowShardGroupsStatement) String() string {
+	if s == nil {
+		return ""
+	}
+	return "SHOW SHARD GROUPS"
+}
 
 // RequiredPrivileges returns the privileges required to execute the statement.
 func (s *ShowShardGroupsStatement) RequiredPrivileges() (ExecutionPrivileges, error) {
@@ -2796,7 +2904,12 @@ func (s *ShowShardGroupsStatement) RequiredPrivileges() (ExecutionPrivileges, er
 type ShowShardsStatement struct{}
 
 // String returns a string representation.
-func (s *ShowShardsStatement) String() string { return "SHOW SHARDS" }
+func (s *ShowShardsStatement) String() string {
+	if s == nil {
+		return ""
+	}
+	return "SHOW SHARDS"
+}
 
 // RequiredPrivileges returns the privileges required to execute the statement.
 func (s *ShowShardsStatement) RequiredPrivileges() (ExecutionPrivileges, error) {
@@ -2811,6 +2924,9 @@ type ShowDiagnosticsStatement struct {
 
 // String returns a string representation of the ShowDiagnosticsStatement.
 func (s *ShowDiagnosticsStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("SHOW DIAGNOSTICS")
 	if s.Module != "" {
@@ -2836,6 +2952,9 @@ type CreateSubscriptionStatement struct {
 
 // String returns a string representation of the CreateSubscriptionStatement.
 func (s *CreateSubscriptionStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("CREATE SUBSCRIPTION ")
 	_, _ = buf.WriteString(QuoteIdent(s.Name))
@@ -2875,6 +2994,9 @@ type DropSubscriptionStatement struct {
 
 // String returns a string representation of the DropSubscriptionStatement.
 func (s *DropSubscriptionStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	return fmt.Sprintf(`DROP SUBSCRIPTION %s ON %s.%s`, QuoteIdent(s.Name), QuoteIdent(s.Database), QuoteIdent(s.RetentionPolicy))
 }
 
@@ -2894,6 +3016,9 @@ type ShowSubscriptionsStatement struct {
 
 // String returns a string representation of the ShowSubscriptionsStatement.
 func (s *ShowSubscriptionsStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	return "SHOW SUBSCRIPTIONS"
 }
 
@@ -2938,6 +3063,9 @@ type ShowTagKeysStatement struct {
 
 // String returns a string representation of the statement.
 func (s *ShowTagKeysStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("SHOW TAG KEYS")
 
@@ -2998,6 +3126,9 @@ type ShowTagKeyCardinalityStatement struct {
 
 // String returns a string representation of the statement.
 func (s *ShowTagKeyCardinalityStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("SHOW TAG KEY ")
 	if s.Exact {
@@ -3083,6 +3214,9 @@ type ShowTagValuesStatement struct {
 
 // String returns a string representation of the statement.
 func (s *ShowTagValuesStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("SHOW TAG VALUES")
 
@@ -3145,6 +3279,9 @@ type ShowTagValuesCardinalityStatement struct {
 
 // String returns a string representation of the statement.
 func (s *ShowTagValuesCardinalityStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("SHOW TAG VALUES ")
 	if s.Exact {
@@ -3201,6 +3338,9 @@ type ShowUsersStatement struct{}
 
 // String returns a string representation of the ShowUsersStatement.
 func (s *ShowUsersStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	return "SHOW USERS"
 }
 
@@ -3221,6 +3361,9 @@ type ShowFieldKeyCardinalityStatement struct {
 
 // String returns a string representation of the statement.
 func (s *ShowFieldKeyCardinalityStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("SHOW FIELD KEY ")
 
@@ -3287,6 +3430,9 @@ type ShowFieldKeysStatement struct {
 
 // String returns a string representation of the statement.
 func (s *ShowFieldKeysStatement) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("SHOW FIELD KEYS")
 
@@ -3396,6 +3542,9 @@ func (f *Field) Name() string {
 
 // String returns a string representation of the field.
 func (f *Field) String() string {
+	if f == nil || f.Expr == nil {
+		return ""
+	}
 	str := f.Expr.String()
 
 	if f.Alias == "" {
@@ -3450,7 +3599,12 @@ type Dimension struct {
 }
 
 // String returns a string representation of the dimension.
-func (d *Dimension) String() string { return d.Expr.String() }
+func (d *Dimension) String() string {
+	if d == nil || d.Expr == nil {
+		return ""
+	}
+	return d.Expr.String()
+}
 
 // Measurements represents a list of measurements.
 type Measurements []*Measurement
@@ -3495,6 +3649,9 @@ func (m *Measurement) Clone() *Measurement {
 
 // String returns a string representation of the measurement.
 func (m *Measurement) String() string {
+	if m == nil {
+		return ""
+	}
 	var buf strings.Builder
 	if m.Database != "" {
 		_, _ = buf.WriteString(QuoteIdent(m.Database))
@@ -3527,6 +3684,9 @@ type SubQuery struct {
 
 // String returns a string representation of the subquery.
 func (s *SubQuery) String() string {
+	if s == nil {
+		return ""
+	}
 	return fmt.Sprintf("(%s)", s.Statement.String())
 }
 
@@ -3538,6 +3698,9 @@ type VarRef struct {
 
 // String returns a string representation of the variable reference.
 func (r *VarRef) String() string {
+	if r == nil {
+		return ""
+	}
 	buf := bytes.NewBufferString(QuoteIdent(r.Val))
 	if r.Type != Unknown {
 		buf.WriteString("::")
@@ -3580,10 +3743,15 @@ type Call struct {
 
 // String returns a string representation of the call.
 func (c *Call) String() string {
+	if c == nil {
+		return ""
+	}
 	// Join arguments.
 	var str []string
 	for _, arg := range c.Args {
-		str = append(str, arg.String())
+		if arg != nil {
+			str = append(str, arg.String())
+		}
 	}
 
 	// Write function name and args.
@@ -3598,6 +3766,9 @@ type Distinct struct {
 
 // String returns a string representation of the expression.
 func (d *Distinct) String() string {
+	if d == nil {
+		return ""
+	}
 	return fmt.Sprintf("DISTINCT %s", d.Val)
 }
 
@@ -3618,6 +3789,9 @@ type NumberLiteral struct {
 
 // String returns a string representation of the literal.
 func (l *NumberLiteral) String() string {
+	if l == nil {
+		return ""
+	}
 	s := strconv.FormatFloat(l.Val, 'f', -1, 64)
 	// If l.Val is a whole number, s will not have a decimal point.
 	// Parsing the resulting string will result in a different AST with an IntegerLiteral
@@ -3637,7 +3811,12 @@ type IntegerLiteral struct {
 }
 
 // String returns a string representation of the literal.
-func (l *IntegerLiteral) String() string { return fmt.Sprintf("%d", l.Val) }
+func (l *IntegerLiteral) String() string {
+	if l == nil {
+		return ""
+	}
+	return fmt.Sprintf("%d", l.Val)
+}
 
 // UnsignedLiteral represents an unsigned literal. The parser will only use an unsigned literal if the parsed
 // integer is greater than math.MaxInt64.
@@ -3646,7 +3825,12 @@ type UnsignedLiteral struct {
 }
 
 // String returns a string representation of the literal.
-func (l *UnsignedLiteral) String() string { return strconv.FormatUint(l.Val, 10) }
+func (l *UnsignedLiteral) String() string {
+	if l == nil {
+		return ""
+	}
+	return strconv.FormatUint(l.Val, 10)
+}
 
 // BooleanLiteral represents a boolean literal.
 type BooleanLiteral struct {
@@ -3655,6 +3839,9 @@ type BooleanLiteral struct {
 
 // String returns a string representation of the literal.
 func (l *BooleanLiteral) String() string {
+	if l == nil {
+		return ""
+	}
 	if l.Val {
 		return "true"
 	}
@@ -3684,6 +3871,9 @@ type ListLiteral struct {
 
 // String returns a string representation of the literal.
 func (s *ListLiteral) String() string {
+	if s == nil {
+		return ""
+	}
 	var buf strings.Builder
 	_, _ = buf.WriteString("(")
 	for idx, tagKey := range s.Vals {
@@ -3702,7 +3892,12 @@ type StringLiteral struct {
 }
 
 // String returns a string representation of the literal.
-func (l *StringLiteral) String() string { return QuoteString(l.Val) }
+func (l *StringLiteral) String() string {
+	if l == nil {
+		return ""
+	}
+	return QuoteString(l.Val)
+}
 
 // IsTimeLiteral returns if this string can be interpreted as a time literal.
 func (l *StringLiteral) IsTimeLiteral() bool {
@@ -3742,6 +3937,9 @@ type TimeLiteral struct {
 
 // String returns a string representation of the literal.
 func (l *TimeLiteral) String() string {
+	if l == nil {
+		return ""
+	}
 	return `'` + l.Val.UTC().Format(time.RFC3339Nano) + `'`
 }
 
@@ -3751,14 +3949,24 @@ type DurationLiteral struct {
 }
 
 // String returns a string representation of the literal.
-func (l *DurationLiteral) String() string { return FormatDuration(l.Val) }
+func (l *DurationLiteral) String() string {
+	if l == nil {
+		return ""
+	}
+	return FormatDuration(l.Val)
+}
 
 // NilLiteral represents a nil literal.
 // This is not available to the query language itself. It's only used internally.
 type NilLiteral struct{}
 
 // String returns a string representation of the literal.
-func (l *NilLiteral) String() string { return `nil` }
+func (l *NilLiteral) String() string {
+	if l == nil {
+		return ""
+	}
+	return `nil`
+}
 
 // BoundParameter represents a bound parameter literal.
 // This is not available to the query language itself, but can be used when
@@ -3769,6 +3977,9 @@ type BoundParameter struct {
 
 // String returns a string representation of the bound parameter.
 func (bp *BoundParameter) String() string {
+	if bp == nil {
+		return ""
+	}
 	return fmt.Sprintf("$%s", QuoteIdent(bp.Name))
 }
 
@@ -3781,6 +3992,9 @@ type BinaryExpr struct {
 
 // String returns a string representation of the binary expression.
 func (e *BinaryExpr) String() string {
+	if e == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s %s %s", e.LHS.String(), e.Op.String(), e.RHS.String())
 }
 
@@ -3814,7 +4028,7 @@ type ParenExpr struct {
 
 // String returns a string representation of the parenthesized expression.
 func (e *ParenExpr) String() string {
-	if e.Expr == nil || e == nil {
+	if e == nil || e.Expr == nil {
 		return ""
 	}
 	return fmt.Sprintf("(%s)", e.Expr.String())
@@ -3827,10 +4041,10 @@ type RegexLiteral struct {
 
 // String returns a string representation of the literal.
 func (r *RegexLiteral) String() string {
-	if r.Val != nil {
-		return fmt.Sprintf("/%s/", strings.Replace(r.Val.String(), `/`, `\/`, -1))
+	if r == nil || r.Val == nil {
+		return ""
 	}
-	return ""
+	return fmt.Sprintf("/%s/", strings.Replace(r.Val.String(), `/`, `\/`, -1))
 }
 
 // CloneRegexLiteral returns a clone of the RegexLiteral.
@@ -3854,6 +4068,9 @@ type Wildcard struct {
 
 // String returns a string representation of the wildcard.
 func (e *Wildcard) String() string {
+	if e == nil {
+		return ""
+	}
 	switch e.Type {
 	case FIELD:
 		return "*::field"
