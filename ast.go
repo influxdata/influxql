@@ -292,7 +292,7 @@ type Query struct {
 
 // String returns a string representation of the query.
 func (q *Query) String() string {
-	if q == nil {
+	if q == nil || q.Statements == nil {
 		return ""
 	}
 	return q.Statements.String()
@@ -1849,7 +1849,7 @@ func (s *SelectStatement) Reduce(valuer Valuer) *SelectStatement {
 
 // String returns a string representation of the select statement.
 func (s *SelectStatement) String() string {
-	if s == nil {
+	if s == nil || s.Fields == nil {
 		return ""
 	}
 	var buf strings.Builder
@@ -2224,7 +2224,7 @@ type DeleteStatement struct {
 
 // String returns a string representation of the delete statement.
 func (s *DeleteStatement) String() string {
-	if s == nil {
+	if s == nil || s.Source == nil {
 		return ""
 	}
 	var buf strings.Builder
