@@ -201,6 +201,9 @@ type Node interface {
 	// node is unexported to ensure implementations of Node
 	// can only originate in this package.
 	node()
+	// String will return the stringified version of Node.
+	// Any receivers that are nil will cause String() to return an
+	// empty string variable ("").
 	String() string
 }
 
