@@ -2193,7 +2193,7 @@ type ExplainStatement struct {
 
 // String returns a string representation of the explain statement.
 func (e *ExplainStatement) String() string {
-	if e == nil {
+	if e == nil || e.Statement == nil {
 		return ""
 	}
 	var buf strings.Builder
@@ -3237,7 +3237,9 @@ func (s *ShowTagValuesStatement) String() string {
 	if lit, ok := s.TagKeyExpr.(*StringLiteral); ok {
 		_, _ = buf.WriteString(QuoteIdent(lit.Val))
 	} else {
-		_, _ = buf.WriteString(s.TagKeyExpr.String())
+		if s.TagKeyExpr != nil {
+			_, _ = buf.WriteString(s.TagKeyExpr.String())
+		}
 	}
 	if s.Condition != nil {
 		_, _ = buf.WriteString(" WHERE ")
@@ -3306,7 +3308,9 @@ func (s *ShowTagValuesCardinalityStatement) String() string {
 	if lit, ok := s.TagKeyExpr.(*StringLiteral); ok {
 		_, _ = buf.WriteString(QuoteIdent(lit.Val))
 	} else {
-		_, _ = buf.WriteString(s.TagKeyExpr.String())
+		if s.TagKeyExpr != nil {
+			_, _ = buf.WriteString(s.TagKeyExpr.String())
+		}
 	}
 	if s.Condition != nil {
 		_, _ = buf.WriteString(" WHERE ")
