@@ -3421,6 +3421,10 @@ type ShowFieldKeysStatement struct {
 	// The database can also be specified per source in the Sources.
 	Database string
 
+	// Retention policy for query. If blank, use the default
+	// retention policy.
+	RetentionPolicy string
+
 	// Data sources that fields are extracted from.
 	Sources Sources
 
@@ -3445,6 +3449,10 @@ func (s *ShowFieldKeysStatement) String() string {
 
 	if s.Database != "" {
 		_, _ = buf.WriteString(" ON ")
+		if s.RetentionPolicy != "" {
+			_, _ = buf.WriteString(QuoteIdent(s.RetentionPolicy))
+			_, _ = buf.WriteString(".")
+		}
 		_, _ = buf.WriteString(QuoteIdent(s.Database))
 	}
 	if s.Sources != nil {

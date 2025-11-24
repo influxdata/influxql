@@ -2717,6 +2717,26 @@ func TestParser_ParseStatement(t *testing.T) {
 				Database: "db0",
 			},
 		},
+		{
+			s: `SHOW FIELD KEYS ON rp1.db0`,
+			stmt: &influxql.ShowFieldKeysStatement{
+				Database:        "db0",
+				RetentionPolicy: "rp1",
+			},
+		},
+		{
+			s: `SHOW FIELD KEYS ON db0 FROM rp1.m0`,
+			stmt: &influxql.ShowFieldKeysStatement{
+				Database:        "db0",
+				RetentionPolicy: "",
+				Sources: []influxql.Source{
+					&influxql.Measurement{
+						RetentionPolicy: "rp1",
+						Name:            "m0",
+					},
+				},
+			},
+		},
 
 		// SHOW FIELD KEY CARDINALITY statement
 		{
