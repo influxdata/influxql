@@ -1571,22 +1571,8 @@ func (p *Parser) parseShowFieldKeysStatement() (*ShowFieldKeysStatement, error) 
 
 	// Parse optional ON clause.
 	if tok, _, _ := p.ScanIgnoreWhitespace(); tok == ON {
-		// Parse the database and optional retention policy.
-		idents, err := p.parseSegmentedIdents()
-		if err != nil {
-			return nil, err
-		}
-
-		// Assign identifiers based on count.
-		switch len(idents) {
-		case 1:
-			stmt.Database = idents[0]
-		case 2:
-			stmt.RetentionPolicy = idents[0]
-			stmt.Database = idents[1]
-		default:
-			return nil, fmt.Errorf("invalid ON clause")
-		}
+		// Parse the database.
+		stmt.Database, err = p.ParseIdent()
 	} else {
 		p.Unscan()
 	}

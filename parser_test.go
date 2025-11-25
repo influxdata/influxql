@@ -2718,21 +2718,25 @@ func TestParser_ParseStatement(t *testing.T) {
 			},
 		},
 		{
-			s: `SHOW FIELD KEYS ON rp1.db0`,
-			stmt: &influxql.ShowFieldKeysStatement{
-				Database:        "db0",
-				RetentionPolicy: "rp1",
-			},
-		},
-		{
 			s: `SHOW FIELD KEYS ON db0 FROM rp1.m0`,
 			stmt: &influxql.ShowFieldKeysStatement{
-				Database:        "db0",
-				RetentionPolicy: "",
+				Database: "db0",
 				Sources: []influxql.Source{
 					&influxql.Measurement{
 						RetentionPolicy: "rp1",
 						Name:            "m0",
+					},
+				},
+			},
+		},
+		{
+			s: `SHOW FIELD KEYS ON db0 FROM rp1./[cg]pu/`,
+			stmt: &influxql.ShowFieldKeysStatement{
+				Database: "db0",
+				Sources: []influxql.Source{
+					&influxql.Measurement{
+						RetentionPolicy: "rp1",
+						Regex:           &influxql.RegexLiteral{Val: regexp.MustCompile(`[cg]pu`)},
 					},
 				},
 			},
