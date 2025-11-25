@@ -1573,6 +1573,9 @@ func (p *Parser) parseShowFieldKeysStatement() (*ShowFieldKeysStatement, error) 
 	if tok, _, _ := p.ScanIgnoreWhitespace(); tok == ON {
 		// Parse the database.
 		stmt.Database, err = p.ParseIdent()
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		p.Unscan()
 	}
