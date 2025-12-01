@@ -630,6 +630,406 @@ func TestParser_ParseStatement(t *testing.T) {
 			},
 		},
 
+		// date_part with dow (day of week)
+		{
+			s: `SELECT my_field FROM myseries WHERE date_part(time, DOW) = 1`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Sources:    []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+				Fields: []*influxql.Field{
+					{Expr: &influxql.VarRef{Val: "my_field"}},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op: influxql.EQ,
+					LHS: &influxql.Call{
+						Name: "date_part",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "time"},
+							&influxql.VarRef{Val: "DOW"},
+						},
+					},
+					RHS: &influxql.IntegerLiteral{Val: 1},
+				},
+			},
+		},
+
+		// date_part with year
+		{
+			s: `SELECT value FROM myseries WHERE date_part(time, YEAR) = 2024`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Sources:    []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+				Fields: []*influxql.Field{
+					{Expr: &influxql.VarRef{Val: "value"}},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op: influxql.EQ,
+					LHS: &influxql.Call{
+						Name: "date_part",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "time"},
+							&influxql.VarRef{Val: "YEAR"},
+						},
+					},
+					RHS: &influxql.IntegerLiteral{Val: 2024},
+				},
+			},
+		},
+
+		// date_part with quarter
+		{
+			s: `SELECT value FROM myseries WHERE date_part(time, QUARTER) = 2`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Sources:    []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+				Fields: []*influxql.Field{
+					{Expr: &influxql.VarRef{Val: "value"}},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op: influxql.EQ,
+					LHS: &influxql.Call{
+						Name: "date_part",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "time"},
+							&influxql.VarRef{Val: "QUARTER"},
+						},
+					},
+					RHS: &influxql.IntegerLiteral{Val: 2},
+				},
+			},
+		},
+
+		// date_part with month
+		{
+			s: `SELECT value FROM myseries WHERE date_part(time, MONTH) = 12`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Sources:    []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+				Fields: []*influxql.Field{
+					{Expr: &influxql.VarRef{Val: "value"}},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op: influxql.EQ,
+					LHS: &influxql.Call{
+						Name: "date_part",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "time"},
+							&influxql.VarRef{Val: "MONTH"},
+						},
+					},
+					RHS: &influxql.IntegerLiteral{Val: 12},
+				},
+			},
+		},
+
+		// date_part with week
+		{
+			s: `SELECT value FROM myseries WHERE date_part(time, WEEK) < 52`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Sources:    []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+				Fields: []*influxql.Field{
+					{Expr: &influxql.VarRef{Val: "value"}},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op: influxql.LT,
+					LHS: &influxql.Call{
+						Name: "date_part",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "time"},
+							&influxql.VarRef{Val: "WEEK"},
+						},
+					},
+					RHS: &influxql.IntegerLiteral{Val: 52},
+				},
+			},
+		},
+
+		// date_part with day
+		{
+			s: `SELECT value FROM myseries WHERE date_part(time, DAY) > 15`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Sources:    []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+				Fields: []*influxql.Field{
+					{Expr: &influxql.VarRef{Val: "value"}},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op: influxql.GT,
+					LHS: &influxql.Call{
+						Name: "date_part",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "time"},
+							&influxql.VarRef{Val: "DAY"},
+						},
+					},
+					RHS: &influxql.IntegerLiteral{Val: 15},
+				},
+			},
+		},
+
+		// date_part with hour
+		{
+			s: `SELECT value FROM myseries WHERE date_part(time, HOUR) = 14`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Sources:    []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+				Fields: []*influxql.Field{
+					{Expr: &influxql.VarRef{Val: "value"}},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op: influxql.EQ,
+					LHS: &influxql.Call{
+						Name: "date_part",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "time"},
+							&influxql.VarRef{Val: "HOUR"},
+						},
+					},
+					RHS: &influxql.IntegerLiteral{Val: 14},
+				},
+			},
+		},
+
+		// date_part with minute
+		{
+			s: `SELECT value FROM myseries WHERE date_part(time, MINUTE) = 30`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Sources:    []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+				Fields: []*influxql.Field{
+					{Expr: &influxql.VarRef{Val: "value"}},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op: influxql.EQ,
+					LHS: &influxql.Call{
+						Name: "date_part",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "time"},
+							&influxql.VarRef{Val: "MINUTE"},
+						},
+					},
+					RHS: &influxql.IntegerLiteral{Val: 30},
+				},
+			},
+		},
+
+		// date_part with second
+		{
+			s: `SELECT value FROM myseries WHERE date_part(time, SECOND) < 60`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Sources:    []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+				Fields: []*influxql.Field{
+					{Expr: &influxql.VarRef{Val: "value"}},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op: influxql.LT,
+					LHS: &influxql.Call{
+						Name: "date_part",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "time"},
+							&influxql.VarRef{Val: "SECOND"},
+						},
+					},
+					RHS: &influxql.IntegerLiteral{Val: 60},
+				},
+			},
+		},
+
+		// date_part with millisecond
+		{
+			s: `SELECT value FROM myseries WHERE date_part(time, MILLISECOND) > 0`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Sources:    []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+				Fields: []*influxql.Field{
+					{Expr: &influxql.VarRef{Val: "value"}},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op: influxql.GT,
+					LHS: &influxql.Call{
+						Name: "date_part",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "time"},
+							&influxql.VarRef{Val: "MILLISECOND"},
+						},
+					},
+					RHS: &influxql.IntegerLiteral{Val: 0},
+				},
+			},
+		},
+
+		// date_part with microsecond
+		{
+			s: `SELECT value FROM myseries WHERE date_part(time, MICROSECOND) > 0`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Sources:    []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+				Fields: []*influxql.Field{
+					{Expr: &influxql.VarRef{Val: "value"}},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op: influxql.GT,
+					LHS: &influxql.Call{
+						Name: "date_part",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "time"},
+							&influxql.VarRef{Val: "MICROSECOND"},
+						},
+					},
+					RHS: &influxql.IntegerLiteral{Val: 0},
+				},
+			},
+		},
+
+		// date_part with nanosecond
+		{
+			s: `SELECT value FROM myseries WHERE date_part(time, NANOSECOND) > 0`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Sources:    []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+				Fields: []*influxql.Field{
+					{Expr: &influxql.VarRef{Val: "value"}},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op: influxql.GT,
+					LHS: &influxql.Call{
+						Name: "date_part",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "time"},
+							&influxql.VarRef{Val: "NANOSECOND"},
+						},
+					},
+					RHS: &influxql.IntegerLiteral{Val: 0},
+				},
+			},
+		},
+
+		// date_part with doy (day of year)
+		{
+			s: `SELECT value FROM myseries WHERE date_part(time, DOY) <= 365`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Sources:    []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+				Fields: []*influxql.Field{
+					{Expr: &influxql.VarRef{Val: "value"}},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op: influxql.LTE,
+					LHS: &influxql.Call{
+						Name: "date_part",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "time"},
+							&influxql.VarRef{Val: "DOY"},
+						},
+					},
+					RHS: &influxql.IntegerLiteral{Val: 365},
+				},
+			},
+		},
+
+		// date_part with epoch (seconds since Unix epoch)
+		{
+			s: `SELECT value FROM myseries WHERE date_part(time, EPOCH) > 1609459200`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Sources:    []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+				Fields: []*influxql.Field{
+					{Expr: &influxql.VarRef{Val: "value"}},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op: influxql.GT,
+					LHS: &influxql.Call{
+						Name: "date_part",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "time"},
+							&influxql.VarRef{Val: "EPOCH"},
+						},
+					},
+					RHS: &influxql.IntegerLiteral{Val: 1609459200},
+				},
+			},
+		},
+
+		// date_part with isodow (ISO day of week, Monday = 1)
+		{
+			s: `SELECT value FROM myseries WHERE date_part(time, ISODOW) != 5`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Sources:    []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+				Fields: []*influxql.Field{
+					{Expr: &influxql.VarRef{Val: "value"}},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op: influxql.NEQ,
+					LHS: &influxql.Call{
+						Name: "date_part",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "time"},
+							&influxql.VarRef{Val: "ISODOW"},
+						},
+					},
+					RHS: &influxql.IntegerLiteral{Val: 5},
+				},
+			},
+		},
+
+		// date_part in SELECT clause
+		{
+			s: `SELECT date_part(time, HOUR) FROM myseries`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: false,
+				Sources:    []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+				Fields: []*influxql.Field{
+					{Expr: &influxql.Call{
+						Name: "date_part",
+						Args: []influxql.Expr{
+							&influxql.VarRef{Val: "time"},
+							&influxql.VarRef{Val: "HOUR"},
+						},
+					}},
+				},
+			},
+		},
+
+		// Multiple date_part functions (weekday filter example)
+		{
+			s: `SELECT value FROM myseries WHERE date_part(time, DOW) != 0 AND date_part(time, DOW) != 6`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Sources:    []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+				Fields: []*influxql.Field{
+					{Expr: &influxql.VarRef{Val: "value"}},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op: influxql.AND,
+					LHS: &influxql.BinaryExpr{
+						Op: influxql.NEQ,
+						LHS: &influxql.Call{
+							Name: "date_part",
+							Args: []influxql.Expr{
+								&influxql.VarRef{Val: "time"},
+								&influxql.VarRef{Val: "DOW"},
+							},
+						},
+						RHS: &influxql.IntegerLiteral{Val: 0},
+					},
+					RHS: &influxql.BinaryExpr{
+						Op: influxql.NEQ,
+						LHS: &influxql.Call{
+							Name: "date_part",
+							Args: []influxql.Expr{
+								&influxql.VarRef{Val: "time"},
+								&influxql.VarRef{Val: "DOW"},
+							},
+						},
+						RHS: &influxql.IntegerLiteral{Val: 6},
+					},
+				},
+			},
+		},
+
 		// SELECT statement (lowercase)
 		{
 			s: `select my_field from myseries`,
