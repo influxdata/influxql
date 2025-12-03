@@ -1021,6 +1021,107 @@ func TestParseString(t *testing.T) {
 	}
 }
 
+// Ensure that the String() value of a statement is parseable
+func TestDatePartFunctionParse(t *testing.T) {
+	var tests = []struct {
+		stmt string
+	}{
+		// Basic date_part with dow (day of week)
+		{
+			stmt: `SELECT "cpu load" FROM myseries WHERE date_part('dow', time) > 0`,
+		},
+		// date_part with year
+		{
+			stmt: `SELECT value FROM myseries WHERE date_part('year', time) = 2024`,
+		},
+		// date_part with quarter
+		{
+			stmt: `SELECT value FROM myseries WHERE date_part('quarter', time) BETWEEN 1 AND 4`,
+		},
+		// date_part with month
+		{
+			stmt: `SELECT value FROM myseries WHERE date_part('month', time) = 12`,
+		},
+		// date_part with week
+		{
+			stmt: `SELECT value FROM myseries WHERE date_part('week', time) < 52`,
+		},
+		// date_part with day
+		{
+			stmt: `SELECT value FROM myseries WHERE date_part('day', time) > 15`,
+		},
+		// date_part with hour
+		{
+			stmt: `SELECT value FROM myseries WHERE date_part('hour', time) BETWEEN 9 AND 17`,
+		},
+		// date_part with minute
+		{
+			stmt: `SELECT value FROM myseries WHERE date_part('minute', time) = 30`,
+		},
+		// date_part with second
+		{
+			stmt: `SELECT value FROM myseries WHERE date_part('second', time) < 60`,
+		},
+		// date_part with millisecond
+		{
+			stmt: `SELECT value FROM myseries WHERE date_part('millisecond', time) > 0`,
+		},
+		// date_part with microsecond
+		{
+			stmt: `SELECT value FROM myseries WHERE date_part('microsecond', time) > 0`,
+		},
+		// date_part with nanosecond
+		{
+			stmt: `SELECT value FROM myseries WHERE date_part('nanosecond', time) > 0`,
+		},
+		// date_part with doy (day of year)
+		{
+			stmt: `SELECT value FROM myseries WHERE date_part('doy', time) <= 365`,
+		},
+		// date_part with epoch (seconds since Unix epoch)
+		{
+			stmt: `SELECT value FROM myseries WHERE date_part('epoch', time) > 1609459200`,
+		},
+		// date_part with isodow (ISO day of week, Monday = 0)
+		{
+			stmt: `SELECT value FROM myseries WHERE date_part('isodow', time) != 5`,
+		},
+		// date_part in SELECT clause
+		{
+			stmt: `SELECT date_part('hour', time) FROM myseries`,
+		},
+		// Multiple date_part functions
+		{
+			stmt: `SELECT value FROM myseries WHERE date_part('dow', time) != 0 AND date_part('dow', time) != 6`,
+		},
+		// date_part with now() function
+		{
+			stmt: `SELECT value FROM myseries WHERE date_part('hour', now()) > 12`,
+		},
+		// date_part in complex WHERE clause (weekday filter from example)
+		{
+			stmt: `SELECT * FROM some_measurement WHERE time >= now() - 10d AND time <= now() AND (date_part('dow', time) != 0 AND date_part('dow', time) != 6)`,
+		},
+	}
+
+	for _, tt := range tests {
+		// Parse statement.
+		stmt, err := influxql.NewParser(strings.NewReader(tt.stmt)).ParseStatement()
+		if err != nil {
+			t.Fatalf("invalid statement: %q: %s", tt.stmt, err)
+		}
+
+		stmtCopy, err := influxql.NewParser(strings.NewReader(stmt.String())).ParseStatement()
+		if err != nil {
+			t.Fatalf("failed to parse string: %v\norig: %v\ngot: %v", err, tt.stmt, stmt.String())
+		}
+
+		if !reflect.DeepEqual(stmt, stmtCopy) {
+			t.Fatalf("statement changed after stringifying and re-parsing:\noriginal : %v\nre-parsed: %v\n", tt.stmt, stmtCopy.String())
+		}
+	}
+}
+
 // Ensure an expression can be reduced.
 func TestEval(t *testing.T) {
 	for i, tt := range []struct {
