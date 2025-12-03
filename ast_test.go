@@ -1028,79 +1028,79 @@ func TestDatePartFunctionParse(t *testing.T) {
 	}{
 		// Basic date_part with dow (day of week)
 		{
-			stmt: `SELECT "cpu load" FROM myseries WHERE date_part(time, DOW) > 0`,
+			stmt: `SELECT "cpu load" FROM myseries WHERE date_part('dow', time) > 0`,
 		},
 		// date_part with year
 		{
-			stmt: `SELECT value FROM myseries WHERE date_part(time, YEAR) = 2024`,
+			stmt: `SELECT value FROM myseries WHERE date_part('year', time) = 2024`,
 		},
 		// date_part with quarter
 		{
-			stmt: `SELECT value FROM myseries WHERE date_part(time, QUARTER) BETWEEN 1 AND 4`,
+			stmt: `SELECT value FROM myseries WHERE date_part('quarter', time) BETWEEN 1 AND 4`,
 		},
 		// date_part with month
 		{
-			stmt: `SELECT value FROM myseries WHERE date_part(time, MONTH) = 12`,
+			stmt: `SELECT value FROM myseries WHERE date_part('month', time) = 12`,
 		},
 		// date_part with week
 		{
-			stmt: `SELECT value FROM myseries WHERE date_part(time, WEEK) < 52`,
+			stmt: `SELECT value FROM myseries WHERE date_part('week', time) < 52`,
 		},
 		// date_part with day
 		{
-			stmt: `SELECT value FROM myseries WHERE date_part(time, DAY) > 15`,
+			stmt: `SELECT value FROM myseries WHERE date_part('day', time) > 15`,
 		},
 		// date_part with hour
 		{
-			stmt: `SELECT value FROM myseries WHERE date_part(time, HOUR) BETWEEN 9 AND 17`,
+			stmt: `SELECT value FROM myseries WHERE date_part('hour', time) BETWEEN 9 AND 17`,
 		},
 		// date_part with minute
 		{
-			stmt: `SELECT value FROM myseries WHERE date_part(time, MINUTE) = 30`,
+			stmt: `SELECT value FROM myseries WHERE date_part('minute', time) = 30`,
 		},
 		// date_part with second
 		{
-			stmt: `SELECT value FROM myseries WHERE date_part(time, SECOND) < 60`,
+			stmt: `SELECT value FROM myseries WHERE date_part('second', time) < 60`,
 		},
 		// date_part with millisecond
 		{
-			stmt: `SELECT value FROM myseries WHERE date_part(time, MILLISECOND) > 0`,
+			stmt: `SELECT value FROM myseries WHERE date_part('millisecond', time) > 0`,
 		},
 		// date_part with microsecond
 		{
-			stmt: `SELECT value FROM myseries WHERE date_part(time, MICROSECOND) > 0`,
+			stmt: `SELECT value FROM myseries WHERE date_part('microsecond', time) > 0`,
 		},
 		// date_part with nanosecond
 		{
-			stmt: `SELECT value FROM myseries WHERE date_part(time, NANOSECOND) > 0`,
+			stmt: `SELECT value FROM myseries WHERE date_part('nanosecond', time) > 0`,
 		},
 		// date_part with doy (day of year)
 		{
-			stmt: `SELECT value FROM myseries WHERE date_part(time, DOY) <= 365`,
+			stmt: `SELECT value FROM myseries WHERE date_part('doy', time) <= 365`,
 		},
 		// date_part with epoch (seconds since Unix epoch)
 		{
-			stmt: `SELECT value FROM myseries WHERE date_part(time, EPOCH) > 1609459200`,
+			stmt: `SELECT value FROM myseries WHERE date_part('epoch', time) > 1609459200`,
 		},
 		// date_part with isodow (ISO day of week, Monday = 0)
 		{
-			stmt: `SELECT value FROM myseries WHERE date_part(time, ISODOW) != 5`,
+			stmt: `SELECT value FROM myseries WHERE date_part('isodow', time) != 5`,
 		},
 		// date_part in SELECT clause
 		{
-			stmt: `SELECT date_part(time, HOUR) FROM myseries`,
+			stmt: `SELECT date_part('hour', time) FROM myseries`,
 		},
 		// Multiple date_part functions
 		{
-			stmt: `SELECT value FROM myseries WHERE date_part(time, DOW) != 0 AND date_part(time, DOW) != 6`,
+			stmt: `SELECT value FROM myseries WHERE date_part('dow', time) != 0 AND date_part('dow', time) != 6`,
 		},
 		// date_part with now() function
 		{
-			stmt: `SELECT value FROM myseries WHERE date_part(now(), HOUR) > 12`,
+			stmt: `SELECT value FROM myseries WHERE date_part('hour', now()) > 12`,
 		},
 		// date_part in complex WHERE clause (weekday filter from example)
 		{
-			stmt: `SELECT * FROM some_measurement WHERE time >= now() - 10d AND time <= now() AND (date_part(time, DOW) != 0 AND date_part(time, DOW) != 6)`,
+			stmt: `SELECT * FROM some_measurement WHERE time >= now() - 10d AND time <= now() AND (date_part('dow', time) != 0 AND date_part('dow', time) != 6)`,
 		},
 	}
 
