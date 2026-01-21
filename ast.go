@@ -1954,6 +1954,11 @@ func (s *SelectStatement) HasDimensionWildcard() bool {
 	return false
 }
 
+// CleanGroupByIntervalCache cleans the cached time interval.
+func (s *SelectStatement) CleanGroupByIntervalCache() {
+	s.groupByInterval = 0
+}
+
 // GroupByInterval extracts the time interval, if specified.
 func (s *SelectStatement) GroupByInterval() (time.Duration, error) {
 	// return if we've already pulled it out
