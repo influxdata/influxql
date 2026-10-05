@@ -653,6 +653,29 @@ func TestParser_ParseStatement(t *testing.T) {
 			},
 		},
 
+		// Uppercase date_part with dow (day of week)
+		{
+			s: `SELECT my_field FROM myseries WHERE date_part('DOW', time) = 1`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Sources:    []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+				Fields: []*influxql.Field{
+					{Expr: &influxql.VarRef{Val: "my_field"}},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op: influxql.EQ,
+					LHS: &influxql.Call{
+						Name: "date_part",
+						Args: []influxql.Expr{
+							&influxql.StringLiteral{Val: "DOW"},
+							&influxql.VarRef{Val: "time"},
+						},
+					},
+					RHS: &influxql.IntegerLiteral{Val: 1},
+				},
+			},
+		},
+
 		// date_part with year
 		{
 			s: `SELECT value FROM myseries WHERE date_part('year', time) = 2024`,
@@ -668,6 +691,29 @@ func TestParser_ParseStatement(t *testing.T) {
 						Name: "date_part",
 						Args: []influxql.Expr{
 							&influxql.StringLiteral{Val: "year"},
+							&influxql.VarRef{Val: "time"},
+						},
+					},
+					RHS: &influxql.IntegerLiteral{Val: 2024},
+				},
+			},
+		},
+
+		// Uppercase date_part with year
+		{
+			s: `SELECT value FROM myseries WHERE date_part('YEAR', time) = 2024`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Sources:    []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+				Fields: []*influxql.Field{
+					{Expr: &influxql.VarRef{Val: "value"}},
+				},
+				Condition: &influxql.BinaryExpr{
+					Op: influxql.EQ,
+					LHS: &influxql.Call{
+						Name: "date_part",
+						Args: []influxql.Expr{
+							&influxql.StringLiteral{Val: "YEAR"},
 							&influxql.VarRef{Val: "time"},
 						},
 					},

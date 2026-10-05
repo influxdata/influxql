@@ -1030,9 +1030,17 @@ func TestDatePartFunctionParse(t *testing.T) {
 		{
 			stmt: `SELECT "cpu load" FROM myseries WHERE date_part('dow', time) > 0`,
 		},
+		// Uppercase day-of-week part
+		{
+			stmt: `SELECT "cpu load" FROM myseries WHERE date_part('DOW', time) > 0`,
+		},
 		// date_part with year
 		{
 			stmt: `SELECT value FROM myseries WHERE date_part('year', time) = 2024`,
+		},
+		// Uppercase year part
+		{
+			stmt: `SELECT value FROM myseries WHERE date_part('YEAR', time) = 2024`,
 		},
 		// date_part with quarter
 		{
