@@ -5,12 +5,11 @@ package influxql
 // ConjunctionsToExprSlice finds all children of AndOperators that are not themselves AndOperators,
 // and returns them in a slice.  If the root node of expr is not an AndOperator, just returns expr.
 //
-//      AND
-//     /   \
-//    AND   r    =>   {p, q, r}
-//   /   \
-//  p     q
-//
+//	    AND
+//	   /   \
+//	  AND   r    =>   {p, q, r}
+//	 /   \
+//	p     q
 func ConjunctionsToExprSlice(expr Expr) []Expr {
 	if e, ok := expr.(*BinaryExpr); ok && e.Op == AND {
 		exprSlice := make([]Expr, 0, 2)
@@ -29,12 +28,11 @@ func ConjunctionsToExprSlice(expr Expr) []Expr {
 // ExprsToConjunction accepts a variable number of expressions and ANDs them
 // together into a single expression.
 //
-//                         AND
-//                        /   \
-//    {p, q, r}    =>    AND   r
-//                      /   \
-//                     p     q
-//
+//	                     AND
+//	                    /   \
+//	{p, q, r}    =>    AND   r
+//	                  /   \
+//	                 p     q
 func ExprsToConjunction(exprs ...Expr) Expr {
 	if len(exprs) == 0 {
 		return nil
@@ -59,12 +57,11 @@ func ExprsToConjunction(exprs ...Expr) Expr {
 //
 // Suppose partitonFn returns true for p and r, and false for q:
 //
-//      AND           passExpr     failExpr
-//     /   \
-//    AND   r    =>     AND           q
-//   /   \             /   \
-//  p     q           p     r
-//
+//	    AND           passExpr     failExpr
+//	   /   \
+//	  AND   r    =>     AND           q
+//	 /   \             /   \
+//	p     q           p     r
 func PartitionExpr(expr Expr, partitionFn func(expression Expr) (bool, error)) (passExpr, failExpr Expr, err error) {
 	exprSlice := ConjunctionsToExprSlice(expr)
 	var passSlice, failSlice []Expr
